@@ -17,7 +17,7 @@ import time
 from scipy import interpolate
 from scipy.stats import linregress
 from scipy.signal import find_peaks_cwt,detrend,butter,sosfiltfilt
-from scipy.signal import peak_prominences,correlate,detrend
+from scipy.signal import peak_prominences,correlate,detrend,fftconvolve
 from scipy.ndimage import convolve
 import concurrent.futures
 import matplotlib as mpl
@@ -250,7 +250,12 @@ def obtainACarray(path,framerate = 16.7,tolerance = 0.2,frequency = 1,periods = 
         k = maskedseries[i,:,:]
         k[maskforseries==0]=0
         
-    
+    def convolveperpix(arr,framerate = framerate):
+        kernel = np.ones(round(framerate))/round(framerate)
+        kernel = kernel[:,np.newaxis,np.newaxis]
+        convolvedseries = fftconvolve(arr,kernel,mode='same',axes = 0)
+        return convolvedseries
+        
     if detr:
         
         series_dperpix = detrend(series,axis = 0)
@@ -326,6 +331,15 @@ def obtainACarray(path,framerate = 16.7,tolerance = 0.2,frequency = 1,periods = 
     meanfft = np.fft.fft(np.mean(series[:,:50,50:],axis=(1,2)))
     angle = np.angle(meanfft[good_freq])
     background = np.cos(2*np.pi*frequency*t+angle)    
+    background = series[:,:100,:100]
+    for i in range(background.shape[0]):
+        k = background[i,:,:]
+        med = np.mean(k)
+        percent = np.percentile(ACarray,99.5)
+        k[ACarray[:100,:100]>=percent] = med
+        background[i,:,:] = k
+    background = np.mean(background,axis = (1,2))
+    
     synthcorrmatrix,synthcorrs = computecorrelation(series,background)
     
     
@@ -371,7 +385,7 @@ def main(mypath = "/Users/victorionescu/electro-optic/16 jan 25 CTRL"):
         print("------")
         print(f"Image no {i+1}")
         print("-----\n")
-        image,DC,promimg,synthimg,signal,mask = obtainACarray(f,start = limits[i][0],end = limits[i][1],periods = min(ps))
+        image,DC,promimg,synthimg,signal,mask = obtainACarray(f,frequency=1,start = limits[i][0],end = limits[i][1],periods = min(ps))
         
                      
         proms.append(promimg)
@@ -456,7 +470,9 @@ def plotsignals(mypath = "/Users/victorionescu/Desktop/6dec"):
         meanseries = np.mean(series,axis = (1,2))
         print(np.argwhere(meanseries == 0))
         kernel = np.ones(round(framerate))/round(framerate)
-        convolvedseries = np.convolve(meanseries,kernel,mode='valid')
+        kernel = kernel[:,np.newaxis,np.newaxis]
+        convolvedseries = fftconvolve(series,kernel,mode='valid',axes = 0)
+        convolvedseries = np.mean(convolvedseries,axis = (1,2))
         fig,ax = plt.subplots(3)
         ax[0].plot(np.linspace(0,len(meanseries)/framerate,len(meanseries)),meanseries)
         ax[0].scatter(np.linspace(0,len(meanseries)/framerate,len(meanseries)),meanseries,marker = '*')
@@ -615,6 +631,19 @@ def testcorr(path,framerate = 16.7,tolerance = 0.2,frequency = 1,periods = 10,st
     DCarray = np.mean(series[:,:,:],axis = 0)
     meanseries = np.mean(series,axis = (1,2))
     back_mean = meanseries
+    selseries=  series[:,:100,:100]
+    lowerone = np.percentile(selseries,1,axis = (1,2))
+    upperone = np.percentile(selseries,99,axis = (1,2))
+
+    for i in range(selseries.shape[0]):
+        k = selseries[i,:,:]
+        med = np.mean(k)
+        
+        k[k<lowerone[i]] = med
+        k[k>upperone[i]] = med
+        selseries[i,:,:] = k
+    
+    back_filtered = np.mean(selseries,axis = (1,2))
     back_selection = np.mean(series[:,:100,:100],axis = (1,2))
     back_segment = np.mean(series,axis=(1,2),where=maskforseries!=0)
     
@@ -639,7 +668,10 @@ def testcorr(path,framerate = 16.7,tolerance = 0.2,frequency = 1,periods = 10,st
         backspl = interpolate.PchipInterpolator(real_t,back_selection)
         back_selection = backspl(synthetic_t)
         backspl = interpolate.PchipInterpolator(real_t,back_segment)
+        
         back_segment = backspl(synthetic_t)
+        backspl = interpolate.PchipInterpolator(real_t,back_filtered)
+        back_filtered = backspl(synthetic_t)
         interpseries = spl(synthetic_t)
         print(f"Changed frame interval to {desiredinterval_s},total time is {newN*desiredinterval_s}")
         series = interpseries
@@ -662,6 +694,7 @@ def testcorr(path,framerate = 16.7,tolerance = 0.2,frequency = 1,periods = 10,st
         back_mean = detrend(back_mean)
         back_selection = detrend(back_selection)
         back_segment = detrend(back_segment)
+        back_filtered = detrend(back_filtered)
         coeffs = np.polyfit(t,np.mean(series,axis = (1,2)),deg = 1)
         trend = coeffs[0]*t+coeffs[1]
         series_dpermean = series-trend[:,np.newaxis,np.newaxis]
@@ -672,6 +705,7 @@ def testcorr(path,framerate = 16.7,tolerance = 0.2,frequency = 1,periods = 10,st
     back_mean = applybandpass(back_mean,framerate)
     back_selection = applybandpass(back_selection,framerate)
     back_segment = applybandpass(back_segment,framerate)
+    back_filtered = applybandpass(back_filtered,framerate)
     series = filteredsignal
     
    
@@ -695,7 +729,7 @@ def testcorr(path,framerate = 16.7,tolerance = 0.2,frequency = 1,periods = 10,st
     
   
     ACarray = np.mean(series_fft[good_freq,:,:],axis = 0)
-    
+    plt.plot(synthetic_t,np.mean(series,axis = (1,2)))
     def computecorrelation(signalmatrix,reference):
         if signalmatrix.shape[0] != reference.shape[0]:
             print("Different lengths for signals!")
@@ -733,27 +767,26 @@ def testcorr(path,framerate = 16.7,tolerance = 0.2,frequency = 1,periods = 10,st
     t = np.linspace(0,series.shape[0]/framerate,series.shape[0])
     meanfft = np.fft.fft(np.mean(series[:,:50,50:],axis=(1,2)))
     angle = np.angle(meanfft[good_freq])
-    background = np.cos(2*np.pi*frequency*t+angle)    
+    background = np.cos(2*np.pi*frequency*t+angle) 
+    background = series[:,:100,:100]
+    for i in range(background.shape[0]):
+        k = background[i,:,:]
+        med = np.mean(k)
+        percent = np.percentile(ACarray,99.5)
+        k[ACarray[:100,:100]>=percent] = med
+        background[i,:,:] = k
+    background = np.mean(background,axis = (1,2))
     synthcorrmatrix,synthcorrs = computecorrelation(series,background)
-    meancorrmatrix,_ = computecorrelation(series,back_mean)
-    segcorrmatrix,_ = computecorrelation(series,back_segment)
-    selcorrmatrix,_ = computecorrelation(series,back_selection)
-    
+    meancorrmatrix,meansig = computecorrelation(series,back_mean)
+    segcorrmatrix,segsig = computecorrelation(series,back_segment)
+    selcorrmatrix,selsig = computecorrelation(series,back_selection)
+    filtcorrmatrix,filtsig = computecorrelation(series,back_filtered)
     
     # background = np.mean(series[:,:,:],axis = (1,2))
     # maskedcorr,maskedsignals = computecorrelation(maskedseries,background)
     
     # maskedcorr = np.nanmean(maskedcorr,axis = (0,1))
-    fig,ax = plt.subplots(2,2)
-    ax[0,0].imshow(synthcorrmatrix,cmap = 'gray')
-    ax[0,0].set_title("Synthetic")
-    ax[1,0].imshow(selcorrmatrix,cmap = 'gray')
-    ax[1,0].set_title("Signal of no cell selection")
-    ax[0,1].imshow(meancorrmatrix,cmap = 'gray')
-    ax[0,1].set_title("Mean signal")
-    ax[1,1].imshow(segcorrmatrix,cmap = 'gray')
-    ax[1,1].set_title("Segmented signal")
-    plt.show()
+   
    
  
    
@@ -767,7 +800,7 @@ def testcorr(path,framerate = 16.7,tolerance = 0.2,frequency = 1,periods = 10,st
     # plt.imshow(synthcorrmatrix,cmap='gray')
     # plt.show()
     corrimage = synthcorrmatrix
-    return synthcorrmatrix,meancorrmatrix,selcorrmatrix,segcorrmatrix
+    return background,back_mean,back_selection,back_segment,back_filtered
     
 def testallcorrs(path):
     sorted_filenames = sortfiles(path)
@@ -775,13 +808,15 @@ def testallcorrs(path):
     mean = []
     select = []
     segment = []
+    filtered = []
     for i,f in enumerate(sorted_filenames):
-        sy,me,sel,seg = testcorr(f)
+        sy,me,sel,seg,filt = testcorr(f)
         synth.append(sy)
         mean.append(me)
         select.append(sel)
         segment.append(seg)
-        for el,name in zip([sy,me,seg,sel],["Synth","Mean sig","Sgement sig","Selection sig"]):
+        filtered.append(filt)
+        for el,name in zip([sy,me,seg,sel,filt],["Synth","Mean sig","Segment sig","Selection sig","Filtered sig"]):
             el = el*10000
             el = np.clip(el,0,65535)
             el = el.astype('uint16')
@@ -790,11 +825,62 @@ def testallcorrs(path):
 
     return synth,mean,select,segment
 
-
+def probedistributions(expname,folder = '/Users/victorionescu/electro-optical/'):
+    
+    fullname = folder+expname
+    sorted_filenames = sortfiles(fullname)
+    sorted_filenames = sorted_filenames[:10]
+    cmap = mpl.colormaps['viridis'].resampled(len(sorted_filenames))
+    for j,file in enumerate(sorted_filenames):
+  
+        onlyfiles = [f for f in listdir(file) if isfile(file+"/"+f) and f !=".DS_Store" and ".tif" in f]
+ 
+        sorted_files = sorted(onlyfiles, key=lambda x: int(x[-8:-4]))
+        
+        images = np.empty(len(sorted_files), dtype=object)
+        for n in range(0, len(sorted_files)):
+            images[n] = cv2.imread( join(file+"/",sorted_files[n]),-1 )
+        dims = np.shape(images[0])
+        images_copy = np.empty((len(images),dims[0],dims[1]))
+        
+        for i in range(len(images)):
+            images_copy[i,:,:] = images[i]
+        images = images_copy
+        
+        images = np.reshape(images,images.shape[0]*images.shape[1]*images.shape[2])
+        
+        plt.hist(images,histtype='step',bins=100,color = cmap(j),label = [n for n in file.split('/') if 'DICT' in n][0][44:],density=True)
+        
+    plt.xlim(3000,6000)
+    plt.title(expname)
+    plt.legend()
+    plt.show()
+  
+        
+        
 
 
 #%%   
+explist = ['18 dec 24 CST', '4 nov 24 CTRL', '18 feb 25 CST1', '11 dec 24 CST2', '25 februarie_5 mgL CST la 12 si 32',  '10 dec 24 CST', 
+ '5 nov 24 CST', '19 feb 25 CST2', '9 dec 24 CST', '25 februarie_2v5 mgL CST la 16 si 33', '3 martie_1v25 CST la 1 si 17', 
+ '20 feb 25 CST1', '12 dec 24 CST', '17 feb 25 CST', '18 feb 25 CST2', '26 februarie_2v5 mgL CST la 12 si 30', '11 dec 24 CST1',
+ '19 dec 24 CST', '12 nov 24 CST', '6 dec 24 CTRL', '19 feb 25 CST1', '6 nov 24 CTRL', '16 jan 25 CTRL', '17 jan 25 CST', '20 feb 25 CST2',
+ '24 feb 25 CST', '5 dec 24 CST', '12 jul 24 CST']
+explist = ['19 feb 25 CST1','19 feb 25 CST2','20 feb 25 CST1','20 feb 25 CST2','24 feb 25 CST']
+
+for e in explist:
+    
+    probedistributions(e)
+#%%
+plotsignals("/Users/victorionescu/electro-optical/20 feb 25 CST2")
+
+#%%
 synth,mean,select,segment = testallcorrs("/Users/victorionescu/electro-optical/20 feb 25 CST2")
+#%%
+for s,f in zip(synth,select):
+    plt.plot(np.linspace(0,len(s),len(s)),s,label = 'cu outlier removal')
+    plt.plot(np.linspace(0,len(f),len(f)),f,label = 'fara outlier removal')
+    plt.show()
 #%%
 if __name__ == '__main__':
     imgs,DCs,proms,synthcorrs,signals,signalcorrs,cellcorrs = main(mypath = "/Users/victorionescu/electro-optical/20 feb 25 CST2")

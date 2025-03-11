@@ -1445,11 +1445,11 @@ def importexperiment(times,ACpath,name,dims,antibiotic=0,backpath = None,corrpat
         corr = pd.read_csv(corrpath)
         corr = processROIs(corr,interesting_values2,times)
     return exp
+#%% ### IMPORT DATA ###
 
 
 
 
-### IMPORT DATA ###
 
 feb17_path = "/Users/victorionescu/Desktop/imagini si rezultate/2025_02_17-CST/ResultsACfilt-2.csv"
 times_17feb = [0, 2, 3, 7, 8, 11, 15, 16, 17, 20, 23, 27, 31,  35, 39, 42, 51, 53, 61, 65, 66, 69, 72, 74, 76, 79, 80, 81, 85, 87, 89, 90, 93, 96, 97, 99, 102, 105, 107, 108, 109, 110, 113, 118, 126, 128, 131, 135]
@@ -1481,10 +1481,10 @@ feb19two_dims = (372,376)
 feb19two_bckg = "/Users/victorionescu/Desktop/imagini si rezultate/2025_02_19-CST2/ResultsACback.csv"
 feb19two_exp = importexperiment(times_19febtwo,feb19two_path,'19 feb(2) 10 mgL',feb19two_dims,antibiotic = 59,backpath = feb19two_bckg)
 
-feb20two_path = "/Users/victorionescu/Desktop/imagini si rezultate/2025_02_20-CST2/ResultsACfilt-2.csv"
+feb20two_path = "/Users/victorionescu/Desktop/imagini si rezultate/2025_02_20-CST2/ResultsCorr.csv"
 times_20febtwo = [0, 3, 7, 11, 14, 18, 22, 24, 33, 40, 42, 45, 49, 50, 51, 54, 58, 60, 63, 66, 67, 70, 73, 76, 79, 82, 83, 87, 88, 89]
 feb20two_dims = (372,376)
-feb20two_bckg = "/Users/victorionescu/Desktop/imagini si rezultate/2025_02_20-CST2/ResultsACback.csv"
+feb20two_bckg = "/Users/victorionescu/Desktop/imagini si rezultate/2025_02_20-CST2/ResultsCorrback.csv"
 feb20two_exp = importexperiment(times_20febtwo,feb20two_path,'20 feb(2) 5 mgL',feb20two_dims,antibiotic = 34,backpath = feb20two_bckg)
 
 jul12_path = "/Users/victorionescu/Desktop/imagini si rezultate/2024_07_12-CST/ResultsACfilt-2.csv"
@@ -1526,11 +1526,6 @@ dec6_dims = (372,376)
 dec6_bckg = '/Users/victorionescu/Desktop/imagini si rezultate/2024_12_06-CTRL/ResultsACback.csv'
 dec6_exp = importexperiment(times_6dec,dec6_path,'6 dec ctrl',dec6_dims,antibiotic=0,backpath=dec6_bckg)
 
-dec10_path = '/Users/victorionescu/Desktop/imagini si rezultate/2024_12_10-CST/ResultsACfilt-2.csv'
-dec10_dims = (372,376)
-times_10dec = [0, 3,6,9,12,15,16,18,21,24,27,30,33,36,39,42,52,59,62,65,68,71,74,77,80,83,86,89,92,95,98,101,104,107,112,115,118,125,128,131,134,137,140,143,146,149,152,155,158,161,164,167,170,173,176,179,182,184]
-dec10_bckg = '/Users/victorionescu/Desktop/imagini si rezultate/2024_12_10-CST/ResultsACback.csv'
-dec10_exp = importexperiment(times_10dec,dec10_path,'10 dec ?mgL',dec10_dims,antibiotic=57,backpath=dec10_bckg)
 
 dec11one_path = '/Users/victorionescu/Desktop/imagini si rezultate/2024_12_11-CST1/ResultsACfilt-2.csv'
 dec11one_dims = (372,376)
@@ -1568,6 +1563,75 @@ ian17_dims = (372,376)
 times_17ian = [0, 6, 9, 12, 19, 23, 25, 27, 28, 32, 34, 37, 43, 44, 51, 55, 56, 58, 59, 63, 66, 68, 70, 73, 75, 77, 79, 81, 84, 87, 92, 93, 96, 98, 101, 105, 108, 111, 114, 115, 117, 120, 121, 123, 124, 127, 130, 132, 141, 158]
 ian17_bckg = '/Users/victorionescu/Desktop/imagini si rezultate/2025_01_17-CST/ResultsACback.csv'
 ian17_exp = importexperiment(times_17ian,ian17_path,'17 ian 2.5 mgL',ian17_dims,antibiotic=49,backpath=ian17_bckg)
+
+feb25one_path = "/Users/victorionescu/Desktop/imagini si rezultate/2025_02_25-CST1/ResultsACfilt-2.csv"
+times_25febone = [0, 8, 14, 18, 22, 24, 30, 33, 35, 37, 45, 53, 56, 58, 61, 62, 66, 68, 71, 73, 74, 75, 78, 81, 84, 87, 90, 93, 94, 97, 100, 102, 105, 106, 110, 114, 117, 121, 124, 125, 133]
+feb25one_dims = (372,376)
+feb25one_bckg = "/Users/victorionescu/Desktop/imagini si rezultate/2025_02_25-CST1/ResultsACback.csv"
+feb25one_exp = importexperiment(times_25febone,feb25one_path,'25 feb(1) 5 mgL',feb25one_dims,antibiotic = 64,backpath = feb25one_bckg)
+
+feb25two_path = "/Users/victorionescu/Desktop/imagini si rezultate/2025_02_25-CST2/ResultsAcfilt-2.csv"
+times_25febtwo = [ 0, 2, 5, 7, 10, 22, 26, 28, 29, 33, 36, 40, 41, 44, 45, 49, 52, 55, 58, 62, 65, 68, 69, 72, 76, 81, 82, 84, 85, 88, 91, 97, 99, 100, 105, 107, 109, 111, 112, 115, 124]
+feb25two_dims = (372,376)
+feb25two_bckg = "/Users/victorionescu/Desktop/imagini si rezultate/2025_02_25-CST2/ResultsACback.csv"
+feb25two_exp = importexperiment(times_25febtwo,feb25two_path,'25 feb(2) 2.5 mgL',feb25two_dims,antibiotic = 67,backpath = feb25two_bckg)
+
+mar3_path = "/Users/victorionescu/Desktop/imagini si rezultate/2025_03_03-CST/ResultsAcfilt-2.csv"
+times_3mar = [ 0, 5, 9, 10, 13, 15, 19, 21, 22, 32, 38, 39, 44, 51, 52, 54, 55, 58, 61, 64, 65, 67, 71, 72, 74, 77, 80, 81, 85, 86, 88, 97, 98, 102, 103, 105, 106, 109, 110, 112, 115, 118, 121, 123, 126, 131, 133, 134]
+mar3_dims = (372,376)
+mar3_bckg = "/Users/victorionescu/Desktop/imagini si rezultate/2025_03_03-CST/ResultsACback.csv"
+mar3_exp = importexperiment(times_3mar,mar3_path,'3 mar 1.25 mgL',mar3_dims,antibiotic = 67,backpath = mar3_bckg)
+
+#%%
+feb19one_path = "/Users/victorionescu/Desktop/imagini si rezultate/2025_02_19-CST1/ResultsACfilt-2.csv"
+times_19febone = [0, 7, 9, 10, 14, 17, 20, 22, 26, 29, 31, 33, 35, 37, 39, 46, 50, 51, 54, 59, 62, 68, 71, 73, 78, 84, 107]
+feb19one_dims = (372,376)
+feb19one_bckg = "/Users/victorionescu/Desktop/imagini si rezultate/2025_02_19-CST1/ResultsACback.csv"
+feb19one_exp = importexperiment(times_19febone,feb19one_path,'19 feb(1) 10 mgL',feb19one_dims,antibiotic = 5,backpath = feb19one_bckg)
+
+feb19two_path = "/Users/victorionescu/Desktop/imagini si rezultate/2025_02_19-CST2/ResultsACfilt-2.csv"
+times_19febtwo = [0, 4, 7, 10, 13, 14, 16, 19, 20, 22, 26, 29, 32, 33, 37, 38, 40, 45, 47, 50, 52, 57, 58, 61, 64, 66, 67, 70, 72, 75, 78, 79, 81, 83, 84, 86, 94, 95, 98, 100, 105, 107, 111, 112, 117, 118, 122, 126]
+feb19two_dims = (372,376)
+feb19two_bckg = "/Users/victorionescu/Desktop/imagini si rezultate/2025_02_19-CST2/ResultsACback.csv"
+feb19two_exp = importexperiment(times_19febtwo,feb19two_path,'19 feb(2) 10 mgL',feb19two_dims,antibiotic = 59,backpath = feb19two_bckg)
+
+feb20two_path = "/Users/victorionescu/Desktop/imagini si rezultate/2025_02_20-CST2/ResultsAcfilt-2.csv"
+times_20febtwo = [0, 3, 7, 11, 14, 18, 22, 24, 33, 40, 42, 45, 49, 50, 51, 54, 58, 60, 63, 66, 67, 70, 73, 76, 79, 82, 83, 87, 88, 89]
+feb20two_dims = (372,376)
+feb20two_bckg = "/Users/victorionescu/Desktop/imagini si rezultate/2025_02_20-CST2/ResultsACback.csv"
+feb20two_exp = importexperiment(times_20febtwo,feb20two_path,'20 feb(2) 5 mgL',feb20two_dims,antibiotic = 34,backpath = feb20two_bckg)
+
+feb25one_path = "/Users/victorionescu/Desktop/imagini si rezultate/2025_02_25-CST1/ResultsACfilt-2.csv"
+times_25febone = [0, 8, 14, 18, 22, 24, 30, 33, 35, 37, 45, 53, 56, 58, 61, 62, 66, 68, 71, 73, 74, 75, 78, 81, 84, 87, 90, 93, 94, 97, 100, 102, 105, 106, 110, 114, 117, 121, 124, 125, 133]
+feb25one_dims = (372,376)
+feb25one_bckg = "/Users/victorionescu/Desktop/imagini si rezultate/2025_02_25-CST1/ResultsACback.csv"
+feb25one_exp = importexperiment(times_25febone,feb25one_path,'25 feb(1) 5 mgL',feb25one_dims,antibiotic = 64,backpath = feb25one_bckg)
+
+feb25two_path = "/Users/victorionescu/Desktop/imagini si rezultate/2025_02_25-CST2/ResultsAcfilt-2.csv"
+times_25febtwo = [ 0, 2, 5, 7, 10, 22, 26, 28, 29, 33, 36, 40, 41, 44, 45, 49, 52, 55, 58, 62, 65, 68, 69, 72, 76, 81, 82, 84, 85, 88, 91, 97, 99, 100, 105, 107, 109, 111, 112, 115, 124]
+feb25two_dims = (372,376)
+feb25two_bckg = "/Users/victorionescu/Desktop/imagini si rezultate/2025_02_25-CST2/ResultsACback.csv"
+feb25two_exp = importexperiment(times_25febtwo,feb25two_path,'25 feb(2) 2.5 mgL',feb25two_dims,antibiotic = 67,backpath = feb25two_bckg)
+
+mar3_path = "/Users/victorionescu/Desktop/imagini si rezultate/2025_03_03-CST/ResultsAcfilt-2.csv"
+times_3mar = [ 0, 5, 9, 10, 13, 15, 19, 21, 22, 32, 38, 39, 44, 51, 52, 54, 55, 58, 61, 64, 65, 67, 71, 72, 74, 77, 80, 81, 85, 86, 88, 97, 98, 102, 103, 105, 106, 109, 110, 112, 115, 118, 121, 123, 126, 131, 133, 134]
+mar3_dims = (372,376)
+mar3_bckg = "/Users/victorionescu/Desktop/imagini si rezultate/2025_03_03-CST/ResultsACback.csv"
+mar3_exp = importexperiment(times_3mar,mar3_path,'3 mar 1.25 mgL',mar3_dims,antibiotic = 67,backpath = mar3_bckg)
+
+dec6_path = '/Users/victorionescu/Desktop/imagini si rezultate/2024_12_06-CTRL/ResultsACfilt-2.csv'
+times_6dec = [0,3,6,9,12,15,18,21,24,27,30,33,36,39,42,45,48,51,54,57,60,63,66,69,72,75,78,81,84,87,90,93]
+dec6_dims = (372,376)
+dec6_bckg = '/Users/victorionescu/Desktop/imagini si rezultate/2024_12_06-CTRL/ResultsACback.csv'
+dec6_exp = importexperiment(times_6dec,dec6_path,'6 dec ctrl',dec6_dims,antibiotic=0,backpath=dec6_bckg)
+
+nov12_path='/Users/victorionescu/Desktop/imagini si rezultate/2024_11_12-CST/ResultsACfilt-2.csv'
+times_12nov = [0,1,5,6,7,13,16,19,25,26,31,36,38,39,42,45,47,51,55,56,65,66,67,68,70,72,78,79,81,83,88,93,96,98,100,103,106,107,112,114,118,121,122,125,131,136,143,152,162]
+nov12_dims = (372,376)
+nov12_bckg = '/Users/victorionescu/Desktop/imagini si rezultate/2024_11_12-CST/ResultsACback.csv'
+nov12_exp = importexperiment(times_12nov,nov12_path,'12 noi 10 mgL',nov12_dims,antibiotic=32,backpath=nov12_bckg)
+
+
 #%%
 mx = 0
 for c in feb20two_exp.cells:
@@ -1652,9 +1716,95 @@ for i,exp in enumerate(explist):
 plt.legend(custom_lines,names)
 plt.show()
 #%%
-goodlist = [jul12_exp,feb20two_exp,ian16_exp,feb19one_exp,feb19two_exp,feb17_exp,feb18one_exp,dec6_exp]
-goodlist = [feb20two_exp,ian16_exp,feb19one_exp,feb19two_exp,dec6_exp,feb17_exp]
-goodlist = [feb20two_exp]
+feb20two_path = "/Users/victorionescu/Desktop/imagini si rezultate/2025_02_20-CST2/ResultsAcfilt-2.csv"
+times_20febtwo = [0, 3, 7, 11, 14, 18, 22, 24, 33, 40, 42, 45, 49, 50, 51, 54, 58, 60, 63, 66, 67, 70, 73, 76, 79, 82, 83, 87, 88, 89]
+feb20two_dims = (372,376)
+feb20two_bckg = "/Users/victorionescu/Desktop/imagini si rezultate/2025_02_20-CST2/ResultsACback.csv"
+feb20two_exp = importexperiment(times_20febtwo,feb20two_path,'20 feb(2) 5 mgL',feb20two_dims,antibiotic = 34,backpath = feb20two_bckg)
+
+feb20two_path = "/Users/victorionescu/Desktop/imagini si rezultate/2025_02_20-CST2/ResultsCorr.csv"
+times_20febtwo = [0, 3, 7, 11, 14, 18, 22, 24, 33, 40, 42, 45, 49, 50, 51, 54, 58, 60, 63, 66, 67, 70, 73, 76, 79, 82, 83, 87, 88, 89]
+feb20two_dims = (372,376)
+feb20two_bckg = "/Users/victorionescu/Desktop/imagini si rezultate/2025_02_20-CST2/ResultsCorrback.csv"
+feb20two_exp_corr = importexperiment(times_20febtwo,feb20two_path,'20 feb(2) 5 mgL',feb20two_dims,antibiotic = 34,backpath = feb20two_bckg)
+#%%
+exp = feb20two_exp
+cellist_AC = [c for c in exp.cells if c.times[-1] >= exp.antibiotic]
+colors = mpl.colormaps['rainbow'].resampled(len(cellist_AC))
+for i,c in enumerate(cellist_AC):
+    
+    plt.plot(c.times,[(c.interior.mean[t]-exp.backgrounds[t])/(c.interior.mean[t]+exp.backgrounds[t]) for t in c.times],label = c.name,c = colors(i))
+plt.legend(fancybox = True,loc='best',prop={'size':7})
+
+plt.ylabel("Contrast interior AC/fundal AC")
+plt.title("Imagini AC")
+plt.xlabel("T(min)")
+plt.show()
+exp = feb20two_exp_corr
+cellist_corr = [c for c in exp.cells if c.times[-1] >= exp.antibiotic]
+colors = mpl.colormaps['rainbow'].resampled(len(cellist_corr))
+for i,c in enumerate(cellist_corr):
+    
+    plt.plot(c.times,[(c.interior.mean[t]-exp.backgrounds[t])/(c.interior.mean[t]+exp.backgrounds[t]) for t in c.times],label = c.name,c = colors(i))
+plt.legend(fancybox = True,loc='best',prop={'size':7})
+
+plt.xlabel("T(min)")
+plt.title("Imagini Corelatie")
+plt.ylabel("Contrast interior corelatie/fundal corelatie")
+plt.show()
+
+
+#%%
+for c_AC,c_corr in zip(cellist_AC,cellist_corr):
+    fig,ax = plt.subplots(2,figsize = (10,10))
+    colors = mpl.colormaps['rainbow'].resampled(len(c_AC.times))
+    for i in range(0,len(c_AC.times),2):
+        t = c_AC.times[i]
+        ax[0].plot(c_AC.bins[t],c_AC.histogram[t],c = colors(i))
+        ax[1].plot(c_corr.bins[t],c_corr.histogram[t],c = colors(i))
+        print(i)
+    fig.suptitle(c_AC.name)
+    ax[0].set_title('Amplitudine (AC)')
+    ax[1].set_title('Corelatie')
+    ax[0].set_xlim(0,32000)
+    ax[1].set_xlim(0,18000)
+
+    fig.colorbar(mpl.cm.ScalarMappable(norm=mpl.colors.Normalize(0,c_AC.times[-1]-c_AC.times[0]), cmap='rainbow'), ax=ax,label = "T (min)",)
+    plt.show()        
+#%%
+print(len(feb20two_exp.cells))
+explist = [feb19one_exp,feb19two_exp,feb20two_exp,feb25one_exp,feb25two_exp,mar3_exp,dec6_exp,nov12_exp]
+fig,ax = plt.subplots(3,figsize = (10,15))
+for exp in explist:
+    ax[0].plot(exp.times,[exp.backgrounds[t] for t in exp.times],label = exp.name+"-back")
+    avgint = []
+    stdint = []
+    for t in exp.times:
+        avg = []
+        for c in exp.cells:
+            if t in c.times:
+                avg.append((c.interior.mean[t]-exp.backgrounds[t])/(c.interior.mean[t]+exp.backgrounds[t]))
+        avgint.append(np.mean(avg))
+        stdint.append(np.std(avg))
+    ax[1].plot(exp.times,avgint,label = exp.name+"-cellint")
+    
+    ax[2].plot([t-exp.antibiotic for t in exp.times],avgint,label = exp.name+"-contrast")
+    ax[2].fill_between([t-exp.antibiotic for t in exp.times],[x-y for x,y in zip(avgint,stdint)],[x+y for x,y in zip(avgint,stdint)],alpha = 0.1)
+    ax[2].vlines(0,0.1,0.5)
+ax[0].legend()
+ax[1].legend()
+ax[2].legend()
+ax[2].set_ylim(0.15,0.45)
+plt.show()
+#%%
+# goodlist = [jul12_exp,feb20two_exp,ian16_exp,feb19one_exp,feb19two_exp,feb17_exp,feb18one_exp,dec6_exp]
+# goodlist = [feb20two_exp,ian16_exp,feb19one_exp,feb19two_exp,dec6_exp,feb17_exp]
+goodlist = [feb20two_exp,feb25two_exp,mar3_exp,feb25one_exp]
+for exp in goodlist:
+    meanback = np.mean([exp.backgrounds[t] for t in exp.times])
+    stdback = np.std([exp.backgrounds[t] for t in exp.times])
+    print(meanback)
+    print(stdback)
 for exp in goodlist:
     counter = 0
     for c in exp.cells:
@@ -1662,12 +1812,12 @@ for exp in goodlist:
             cols = mpl.colormaps['viridis'].resampled(len(c.times))
             for i,t in enumerate(c.times):
                
-                plt.plot(c.bins[t],c.histogram[t],c = cols(i))
-                plt.vlines(c.hmean[t]+c.hstd[t],0,0.08,color = cols(i))
+                plt.plot(c.bins[t],c.interior.histogram[t],c = cols(i))
+                
             plt.title(f'Exp: {exp.name}; Cell: {c.name}')
-            maxelarg = np.nonzero(c.histogram[t])[0][-1]
+            maxelarg = np.nonzero(c.interior.histogram[t])[0][-1]
             maxelement = c.bins[t][maxelarg]
-            plt.xlim(0,maxelement+500)
+            plt.xlim(c.mean[t]-c.std[t],c.mean[t]+c.std[t])
             plt.show()
             counter+=1
 colors = mpl.colormaps['rainbow'].resampled(len(goodlist))
@@ -1675,53 +1825,54 @@ for i,exp in enumerate(goodlist):
     counter = 0
     for c in exp.cells:
         if c.times[-1]>= exp.antibiotic and c.duration >0:
-            plt.plot(c.times[1:],[((c.std[t]+c.mean[t])) for t in c.times[1:]],c = colors(i))
+            value = [np.sum([c.histogram[t][i]*500  for i in range(len(c.bins[t])) if c.bins[t][i] >c.hmean[t]-c.hstd[t] and c.bins[t][i] <c.mean[t]+c.std[t]]) for t in c.times]
+            plt.plot(c.times[:],value,c = colors(i))
             
             counter+=1
     plt.title(exp.name+"; Anti T: "+str(exp.antibiotic))
 plt.legend([mpl.lines.Line2D([0], [0], color=colors(i), lw=4) for i in range(len(goodlist))],[e.name for e in goodlist])
 plt.show()
 #%%
-cell = [c for c in feb20two_exp.cells if c.name == 'Track_3.aa'][0]
+cel = [c for c in feb20two_exp.cells if c.name == 'Track_3.aa'][0]
 times = [40,50,feb20two_exp.times[-1]]
 for t in times:
     plt.plot(cell.bins[t],cell.histogram[t])
-    plt.xlim(0,max(cell.bins[t]))
+    plt.xlim(0,20000)
     plt.title(cell.name+"; Time = "+str(t))
     plt.ylim(0,0.09)
     plt.show()
 for t in times:
-    plt.plot(cell.bins[t],cell.histogram[t],label = "T="+str(t))
-    plt.xlim(0,max(cell.bins[t]))
+    plt.plot(cell.bins[t],cell.histogram[t],label = "T ="+str(t))
+    plt.xlim(0,20000)
     plt.title(cell.name)
 plt.legend()
 plt.show()
 #%%
-goodlist = [jul12_exp,feb20two_exp,feb19one_exp,feb19two_exp,ian16_exp,feb18one_exp,feb18two_exp]
-goodlist = [feb20two_exp]
-ctrllist = [dec6_exp,nov6_exp,nov4_exp]
+# goodlist = [jul12_exp,feb20two_exp,feb19one_exp,feb19two_exp,ian16_exp,feb18one_exp,feb18two_exp]
+goodlist = [feb25two_exp]
+# ctrllist = [dec6_exp,nov6_exp,nov4_exp]
 fig,ax = plt.subplots(2,figsize = (10,10),sharey = True)
-
-for exp in goodlist:
+colors = mpl.colormaps['rainbow'].resampled(len(goodlist))
+for i,exp in enumerate(goodlist):
     meandictanti = {t:[] for t in exp.times}
     meandictcontrol = {t:[] for t in exp.times}
-    valuename = "Contrast interior/fundal"
+    valuename = "Contrast interior fundal"
     for c in exp.cells:
-        value = [(c.interior.mean[t]-exp.backgrounds[t])/(c.interior.mean[t]+exp.backgrounds[t]) for t in c.times ]
+        value = [ np.sum([c.histogram[t][i] if c.bins[t][i] > c.mean[t]-c.std[t] and  c.bins[t][i] < c.mean[t]+c.std[t] for i in range(len(c.bins[t])]) for t in c.times]
         time = c.times
         
-        if c.times[-1]>= exp.antibiotic and c.duration>10:
-            ax[0].plot(time,value,c = 'r',alpha = 0.3)
+        if c.times[-1]>= exp.antibiotic and c.duration>10 and exp.antibiotic != 0:
+            ax[0].plot(time,value,c = colors(i),alpha = 0.3)
             [meandictanti[t].append(v) for t,v in zip(time,value)]
         else:
             if c.duration >10:
-                ax[1].plot(time,value,c='b',alpha = 0.3)
+                ax[1].plot(time,value,c=colors(i),alpha = 0.3)
                 [meandictcontrol[t].append(v) for t,v in zip(time,value)]
     antitimes = [t for t in exp.times if meandictanti[t] != []]
     controltimes = [t for t in exp.times if meandictcontrol[t] != []]
     
-    ax[0].errorbar(antitimes,[np.mean(meandictanti[t]) for t in antitimes],[np.std(meandictanti[t]) for t in antitimes],markersize = 20,c = 'r',label = 'Anti trendline')
-    ax[1].errorbar(controltimes,[np.mean(meandictcontrol[t]) for t in controltimes],[np.std(meandictcontrol[t]) for t in controltimes],markersize = 20,c = 'b',label = 'Control trendline')
+    ax[0].errorbar(antitimes,[np.mean(meandictanti[t]) for t in antitimes],[np.std(meandictanti[t]) for t in antitimes],markersize = 20,c = colors(i),label = exp.name+'-Anti trendline')
+    ax[1].errorbar(controltimes,[np.mean(meandictcontrol[t]) for t in controltimes],[np.std(meandictcontrol[t]) for t in controltimes],markersize = 20,c = colors(i),label = exp.name+'-Control trendline')
     ax[0].set_title("Anti: T="+str(exp.antibiotic))
     ax[1].set_title("Ctrl")
     ax[0].set_ylabel(valuename)
@@ -1733,11 +1884,11 @@ ax[0].legend()
     
 plt.show()
    
-for c in feb20two_exp.cells:
-    if c.times[-1]>= exp.antibiotic and c.duration>10:
-        plt.plot([t for t in c.times if c.maxpoledistance[t] !=0],[c.maxpoledistance[t]/c.major[t] for t in c.times if c.maxpoledistance[t]!=0])
+# for c in feb20two_exp.cells:
+#     if c.times[-1]>= exp.antibiotic and c.duration>10:
+#         plt.plot([t for t in c.times if c.maxpoledistance[t] !=0],[c.maxpoledistance[t]/c.major[t] for t in c.times if c.maxpoledistance[t]!=0])
         
-plt.show()
+# plt.show()
 
 #%%
 ### Check duplicates

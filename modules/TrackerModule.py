@@ -313,11 +313,11 @@ class imagenetwork:
         self.mt_getbackoverlaps()
         
     # have to make methods for: 
-        # - patching up missing labels 
-        # - removing garbage
-        # - splitting undersegmented stuff
-        # - filling in oversegmented stuff
-        # - determining network
+        # - patching up missing labels - easy enough, look forwards
+        # - removing garbage - done, can reliably remove nodes and labels
+        # - splitting undersegmented stuff - harder, if time gap is not too large can split based on boundary, then recompute overlaps
+        # - filling in oversegmented stuff - even harder, have to detect when area decreases suddenly and multiple bad overlaps appear
+        # - determining network - have to have labels for: out of frame, lost contrast etc., and disallow splits with more than 2 cells for now, and also disallow merges (where we find undersegmentation)
         
     def mt_findchildren(self):
         with concurrent.futures.ThreadPoolExecutor() as executor:
@@ -829,15 +829,19 @@ def evaluatecandidates(distancetoothers,overlaps,anglestoothers,areatoothers,ars
 
 # have to check for other cases maybe after looking over entire graph: 
     # -oversegmented contours (join back in frame where false split was detected, 
-    # so graph can have joins): maybe base this off COM position?
+    # so graph can have joins): maybe base this off COM position 
     
-    # -undersegmented contours (split make a split of contours, hard to implement): could split ellipse in half and keep that as two approximates
-    # - cell goes out of frame: terminate lineage early if it touches the edge
-    # -remove graphs that are too short/not from the start
-    # -sound alarms when there are too many shapes in one frame 
+    # -undersegmented contours (split make a split of contours, hard to implement): could split ellipse in half and keep that as two approximates( bad, doesn't work for other cell types)
+    # - cell goes out of frame: terminate lineage early if it touches the edge and add cutoff clag
+    # cell is unable to be detected: terminate lineage early and add cutoff flag
+    # -remove graphs that are too short/not from the start - denoising
+    # -sound alarms when there are too many shapes in one frame - most likely focus loss, use calibration curve to determine maximum allowed number of cells after x mins
     
 
-# have to construct graph object
+# have to construct graph object: easy enough, can just ammend node class
+# have to do naming covention: much later
+# have to allow tracks to be edited and displayed
+# allow export into other programs (ImageJ for ROI editing maybe, Trackmate for easier track editing in case segmentation is correct)
 
 def evaluateframe(frame,framedict1,framedict2,distancematrix,ind):
     
