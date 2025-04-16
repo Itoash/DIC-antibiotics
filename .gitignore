@@ -1,0 +1,13 @@
+.DS_Store
+Test Images
+__pycache__
+Old Scripts
+Test Images
+Misc. files
+build
+dist
+AnalysisGUI
+*.so
+*cpp
+cellprocesor_backup.pyx
+
