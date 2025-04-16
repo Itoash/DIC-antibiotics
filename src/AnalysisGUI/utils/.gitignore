@@ -1,0 +1,9 @@
+.DS_Store
+untitled*.py
+build
+__pycache__
+*.c
+*.cpp
+*.so
+*.html
+*.h
