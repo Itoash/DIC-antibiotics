@@ -10,8 +10,7 @@ Created on Fri Apr 11 10:50:13 2025
 def runApp():
     import sys
     from PyQt5.QtWidgets import QApplication
-    from AnalysisGUI.newapp import MainWindow
-    QApplication.setStyle("Fusion")
+    from AnalysisGUI.main_window import MainWindow
     app = QApplication(sys.argv)
     app.setApplicationName('AC analysis')
     imageViewer = MainWindow()

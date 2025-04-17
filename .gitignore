@@ -5,8 +5,6 @@ Old Scripts
 Test Images
 Misc. files
 build
-dist
-AnalysisGUI
 *.so
 *cpp
 cellprocesor_backup.pyx

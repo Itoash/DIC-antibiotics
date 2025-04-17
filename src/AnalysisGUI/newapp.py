@@ -4,7 +4,7 @@
 Created on Tue Mar 25 08:03:22 2025
 
 @author: victorionescu
-PyQT5/pyqtgraph test
+App scripts
 """
 import numpy as np
 import pyqtgraph as pg

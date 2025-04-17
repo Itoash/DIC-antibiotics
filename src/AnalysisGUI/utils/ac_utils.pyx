@@ -100,7 +100,7 @@ cdef figure_limits(np.ndarray[double, ndim=3] series, double framerate, int star
     cdef:
         np.ndarray[double, ndim=1] time = np.linspace(0, series.shape[0]/framerate, series.shape[0])
         np.ndarray[double, ndim=1] meanseries = np.mean(np.mean(series, axis=1), axis=1)
-        np.ndarray[long, ndim=1] defaults = np.array([start, end], dtype=np.int64)
+        np.ndarray[long, ndim=1] defaults = np.array([start, end], dtype=int)
         np.ndarray[double, ndim=1] diff
         np.ndarray[long, ndim=1] outliers
         np.ndarray[long, ndim=1] outlierdiffs
@@ -109,14 +109,14 @@ cdef figure_limits(np.ndarray[double, ndim=3] series, double framerate, int star
         int i
     
     diff = np.diff(meanseries)
-    outliers = np.argwhere(abs(diff) > 3*np.std(meanseries)).flatten()
+    outliers = np.argwhere(abs(diff) > 3*np.std(meanseries)).flatten().astype(long)
     outliers = np.append(outliers, defaults)
     outliers = np.sort(outliers)
-    outlierdiffs = np.diff(outliers)
+    outlierdiffs = np.diff(outliers).astype(long)
     
     # Find the maximum difference between outliers
-    cdef int max_idx = np.argmax(outlierdiffs)
-    selectedrange = np.array([outliers[max_idx]+1, outliers[max_idx+1]-1])
+    cdef long max_idx = np.argmax(outlierdiffs)
+    selectedrange = np.array([outliers[max_idx]+1, outliers[max_idx+1]-1]).astype(long)
     
     start = int(selectedrange[0])
     end = int(selectedrange[1])

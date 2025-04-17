@@ -14,13 +14,13 @@ class CellViewer(QtWidgets.QMainWindow):
         -----------
         data_dict : dict
             Dictionary of {object_name: {property: data}} where each object has contour data
-            Each object should have an 'idx' list of integers indicating image indices where it appears
+            Each object should have a 'times' list of time values indicating when it appears
         ac_images : list
             List of AC images (numpy arrays), one per timepoint
         dc_images : list
             List of DC images (numpy arrays), one per timepoint
-        globaltimes: np.ndarray[int,ndim=1]
-            Array of time values to set as x axis labels
+        globaltimes: np.ndarray[float,ndim=1]
+            Array of time values to set as x axis labels (in minutes)
         parent : QWidget, optional
             Parent widget
         """
@@ -28,8 +28,14 @@ class CellViewer(QtWidgets.QMainWindow):
         self.data_dict = data_dict
         self.ac_images = ac_images
         self.dc_images = dc_images
-        self.globalTimes = globaltimes
-        self.current_time = 0
+        self.globalTimes = globaltimes.astype(float)
+        
+        # Create a mapping between time values and image indices
+        self.time_to_index = {time: idx for idx, time in enumerate(self.globalTimes)}
+        self.index_to_time = {idx: time for idx, time in enumerate(self.globalTimes)}
+        
+        self.current_time_value = self.globalTimes[0] if len(self.globalTimes) > 0 else 0
+        self.current_image_index = 0
         self.contour_items = {'ac': [], 'dc': []}
         self.current_object = None
         self.time_change_lock = False  # Lock to prevent recursive time change calls
@@ -114,32 +120,51 @@ class CellViewer(QtWidgets.QMainWindow):
         if self.ac_images:
             # Convert list of 2D arrays to a 3D array (time, height, width)
             ac_stack = np.array(self.ac_images)
-            self.ac_view.setImage(ac_stack,xvals = self.globalTimes)
+            self.ac_view.setImage(ac_stack, xvals=self.globalTimes)
             
         if self.dc_images:
             # Convert list of 2D arrays to a 3D array (time, height, width)
             dc_stack = np.array(self.dc_images)
-            self.dc_view.setImage(dc_stack,xvals = self.globalTimes)
+            self.dc_view.setImage(dc_stack, xvals=self.globalTimes)
     
-    def synchronize_time(self, time_idx, source):
-        """Synchronize the time index between AC and DC views."""
+    def synchronize_time(self, time_or_index, source):
+        """
+        Synchronize the time between AC and DC views.
+        
+        Parameters:
+        -----------
+        time_or_index : float or int
+            Time value or index from the slider
+        source : str
+            Which view triggered the change ('ac' or 'dc')
+        """
         if self.time_change_lock:
             return
             
         self.time_change_lock = True
         
-        self.current_time = int(time_idx)
-        print(time_idx)
+        # pyqtgraph time change might give us the actual time value, not the index
+        # We need to find the nearest index for this time
+        if isinstance(time_or_index, float):
+            # Find the nearest time value in globalTimes
+            closest_idx = np.abs(self.globalTimes - time_or_index).argmin()
+            self.current_image_index = closest_idx
+            self.current_time_value = self.globalTimes[closest_idx]
+        else:
+            # We've been given an integer index directly
+            self.current_image_index = int(time_or_index)
+            self.current_time_value = self.globalTimes[self.current_image_index]
+        
+        print(f"Time synchronized: index={self.current_image_index}, time={self.current_time_value}")
         
         # Update the other view without triggering its own signal
         if source == 'ac' and self.dc_view.image is not None:
-            self.dc_view.setCurrentIndex(self.current_time)
+            self.dc_view.setCurrentIndex(self.current_image_index)
         elif source == 'dc' and self.ac_view.image is not None:
-            self.ac_view.setCurrentIndex(self.current_time)
+            self.ac_view.setCurrentIndex(self.current_image_index)
             
         # Clear existing contours first
         self.clear_contours()
-        print("Cleared contours")
         
         # Update contours for the current object
         if self.current_object:
@@ -168,15 +193,23 @@ class CellViewer(QtWidgets.QMainWindow):
         if not obj_data:
             return
             
-        # Get the list of image indices where this object appears
-        image_indices = obj_data.get('times', [])
+        # Get the list of time values where this object appears
+        object_times = obj_data.get('times', [])
+        if not len(object_times):
+            return
             
+        # Find the first time when the object appears
+        first_time = object_times[0]
+        
+        # Find the closest image index for this time
+        closest_idx = np.abs(self.globalTimes - first_time).argmin()
+        
         # Snap to the first frame where the object appears
         self.time_change_lock = True
-        first_frame = image_indices[0]
-        self.current_time = first_frame
-        self.ac_view.setCurrentIndex(first_frame)
-        self.dc_view.setCurrentIndex(first_frame)
+        self.current_time_value = first_time
+        self.current_image_index = closest_idx
+        self.ac_view.setCurrentIndex(closest_idx)
+        self.dc_view.setCurrentIndex(closest_idx)
         self.time_change_lock = False
         
         # Update contours for the selected object
@@ -201,21 +234,27 @@ class CellViewer(QtWidgets.QMainWindow):
         if not obj_data:
             return
             
-        # Get the list of image indices where this object appears
-        image_indices = obj_data.get('times', []).tolist()
-        if not image_indices:
-            return 
+        # Get the list of time values where this object appears
+        object_times = obj_data.get('times', [])
+        if not len(object_times):
+            return
+        
+        # Convert to a list if it's a numpy array
+        if isinstance(object_times, np.ndarray):
+            object_times = object_times.tolist()
             
-        # Find the position of the current time in the object's timeline
-        # If current_time is in image_indices, draw the corresponding contour
-        if self.current_time in image_indices:
-            # Find the index in the object's data arrays corresponding to the current time
-            obj_time_idx = image_indices.index(self.current_time)
-            
+        # Find the closest time in the object's timeline to the current time
+        closest_time_idx = np.abs(np.array(object_times) - self.current_time_value).argmin()
+        object_time = object_times[closest_time_idx]
+        
+        # Only draw contours if we're within a reasonable tolerance of the object's time
+        # This avoids drawing contours when the object doesn't actually exist at the current time
+        time_tolerance = 0.1  # Adjust this value as needed (in minutes)
+        if abs(object_time - self.current_time_value) <= time_tolerance:
             # Draw interior contours (green) - can be multiple contours per timepoint
             interior_contours = obj_data.get('Interior contour', [])
-            if interior_contours and obj_time_idx < len(interior_contours):
-                current_interior_contours = interior_contours[obj_time_idx]
+            if interior_contours and closest_time_idx < len(interior_contours):
+                current_interior_contours = interior_contours[closest_time_idx]
                 
                 # Handle both cases: single contour or list of contours
                 if isinstance(current_interior_contours, list) or isinstance(current_interior_contours, tuple):
@@ -230,9 +269,9 @@ class CellViewer(QtWidgets.QMainWindow):
             
             # Draw total contour (red) - single contour per timepoint
             total_contours = obj_data.get('Total contour', [])
-            if total_contours and obj_time_idx < len(total_contours):
-                self.draw_contour(total_contours[obj_time_idx], 'red', 'ac')
-                self.draw_contour(total_contours[obj_time_idx], 'red', 'dc')
+            if total_contours and closest_time_idx < len(total_contours):
+                self.draw_contour(total_contours[closest_time_idx], 'red', 'ac')
+                self.draw_contour(total_contours[closest_time_idx], 'red', 'dc')
     
     def draw_contour(self, contour_points, color, view_type):
         """
