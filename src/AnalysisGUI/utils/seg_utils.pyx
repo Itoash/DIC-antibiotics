@@ -5,6 +5,8 @@ import numpy as np
 cimport numpy as np
 from cellpose_omni import models
 import time
+import omnipose
+
 
 def segmentDComni(list imgs):
     """
@@ -22,7 +24,8 @@ def segmentDComni(list imgs):
     """
     cdef int nimg = len(imgs)
     cdef str model_name = 'bact_phase_omni'
-    cdef object model = models.CellposeModel(model_type=model_name)
+    cdef object use_GPU = omnipose.gpu.use_gpu()
+    cdef object model = models.CellposeModel(gpu=use_GPU,model_type=model_name)
     
     cdef list chans = [0, 0]  # segment based on first channel, no second channel
     
@@ -49,7 +52,6 @@ def segmentDComni(list imgs):
     cdef double tic = time.time()
     cdef list image_list = [imgs[i] for i in n]
     cdef list masks, flows, styles
-    
     masks, flows, styles = model.eval(image_list, **params)
     
     cdef double net_time = time.time() - tic

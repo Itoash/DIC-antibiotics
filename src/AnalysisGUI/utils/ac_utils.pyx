@@ -22,6 +22,7 @@ from numpy cimport ndarray
 from functools import cache
 import os
 
+
 cdef parallel_bandpass3D(np.ndarray[double, ndim=3] series, double framerate, np.ndarray frequencies=np.array([0.1, 6]), int num_workers=8):
     """Parallelize 3D bandpass filter by splitting the spatial dimensions
     
@@ -343,4 +344,4 @@ cpdef get_AC_data(np.ndarray[double, ndim=3] images, double framerate=16.7, doub
     
     return ACarray, DCarray, (time, series), (start, end)
 
-   
+        

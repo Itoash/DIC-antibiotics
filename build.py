@@ -3,7 +3,7 @@ import shutil
 from setuptools import Distribution, Extension
 import numpy as np
 from Cython.Build import build_ext, cythonize
-
+import platform
 # Use absolute paths to avoid confusion
 base_dir = os.path.dirname(os.path.abspath(__file__))
 cython_dir = os.path.join(base_dir, "src", "AnalysisGUI", "utils")
@@ -68,3 +68,4 @@ for output in cmd.get_outputs():
     target_path = os.path.join(target_dir, filename)
     print(f"Copying {output} -> {target_path}")
     shutil.copyfile(output, target_path)
+

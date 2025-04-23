@@ -11,6 +11,7 @@ packages = [{include = "AnalysisGUI", from = "src"}]
 script = "build.py"
 generate-setup-file = false
 
+
 [tool.poetry.dependencies]
 python = ">=3.10,<3.13"
 numpy = "~1.26"
@@ -21,10 +22,25 @@ matplotlib = "^3.10.1"
 cython = "^3.0.12"
 natsort = "^8.4.0"
 aicsimageio = "^4.14.0"
-omnipose = "^1.0.6"
+omnipose = { git = "https://github.com/kevinjohncutler/omnipose.git" }
 scipy = "~1.11"
 loky = "^3.5.1"
 dill = "^0.3.9"
+networkit = "<11.1.post1"
+
+
+
+torch = {version = "^2.6.0", platform = "darwin"}  # Mac version
+torchvision = {version = "0.21.0", platform = "darwin"}  # Mac version
+
+# Define the custom source for PyTorch with CUDA
+[[tool.poetry.source]]
+name = "torch-cuda"
+url = "https://download.pytorch.org/whl/cu126"  # Adjust CUDA version as needed
+priority = "explicit"
+
+
+
 
 [tool.poetry.scripts]
 startGUI = 'AnalysisGUI.__main__:runApp'
