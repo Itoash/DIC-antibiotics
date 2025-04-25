@@ -109,7 +109,20 @@ class TrackWindow(QtWidgets.QMainWindow):
         self.sigKeyPressed.connect(self.Graph.keyPressEvent)
         self.Graph.sigNodesLinked.connect(self.linkNodes)
         self.Graph.sigNodeDisconnected.connect(self.unlinkNode)
+        self.Graph.sigContextMenuOpened.connect(self.supersedeRClick)
+        self.GraphPlot.plotItem.vb.mouseDragEvent = self.customMouseDragEvent
 
+    def customMouseDragEvent(self, ev, axis=None):
+        # Get the original method
+        original_method = pg.ViewBox.mouseDragEvent.__get__(
+            self.GraphPlot.plotItem.vb, pg.ViewBox)
+        # Call the original method only for non-right button events
+        if ev.button() != QtCore.Qt.RightButton:
+            original_method(ev, axis)
+        else:
+            ev.accept()  # Accept right button events but don't process them
+    def supersedeRClick(self):
+        self.GraphPlot.clearMouse()
     def rescaledLabels(self,oldlabels,newlabels,currIdx):
         self.imagenet.reassignLabels(oldlabels,newlabels,currIdx)
         graphnodes, graphedges, text, meta = self.imagenet.exportGraph()

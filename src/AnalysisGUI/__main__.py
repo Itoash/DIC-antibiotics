@@ -14,5 +14,6 @@ def runApp():
     app = QApplication(sys.argv)
     app.setApplicationName('AC analysis')
     imageViewer = MainWindow()
+    imageViewer.resize(1600, 900)
     imageViewer.showMaximized()
     sys.exit(app.exec_())

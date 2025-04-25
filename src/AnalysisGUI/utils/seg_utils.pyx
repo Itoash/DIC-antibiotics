@@ -7,7 +7,6 @@ from cellpose_omni import models
 import time
 import omnipose
 
-
 def segmentDComni(list imgs):
     """
     Segment images using Cellpose Omni model
@@ -26,7 +25,6 @@ def segmentDComni(list imgs):
     cdef str model_name = 'bact_phase_omni'
     cdef object use_GPU = omnipose.gpu.use_gpu()
     cdef object model = models.CellposeModel(gpu=use_GPU,model_type=model_name)
-    
     cdef list chans = [0, 0]  # segment based on first channel, no second channel
     
     cdef np.ndarray n = np.arange(nimg, dtype=np.int32)  # segment all images in list

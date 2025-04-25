@@ -203,7 +203,7 @@ class OverlayImage(pg.ImageView):
 
         # connect mouseMove and time change signals to display tooltip with px info
         self.imageItem.scene().sigMouseMoved.connect(self.mouseMove)
-        self.sigTimeChanged.connect(self.tChange)
+        #self.sigTimeChanged.connect(self.tChange)
         self.view.setMenuEnabled(False)
         # self.view.mouseDragEvent = types.MethodType(mouseDragEvent,self.view)
         self.menu = QtWidgets.QMenu()

@@ -26,7 +26,7 @@ class ImageHolder:
 
     def update(self, hardlimits=False):
         tic = tm.time()
-        self.AC, self.DC, self.signaldata, _ = get_AC_data(self.raws.astype(np.float64),
+        self.AC, self.DC, self.signaldata, _ = get_AC_data(self.raws.astype(np.float32).copy(),
                                                            frequency=self.frequency,
                                                            framerate=self.framerate,
                                                            start=self.limits[0],

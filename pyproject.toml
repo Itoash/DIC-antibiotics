@@ -28,20 +28,19 @@ loky = "^3.5.1"
 dill = "^0.3.9"
 networkit = "<11.1.post1"
 
+torch = [
+    { version = "^2.6.0", source = "PyPI", platform = "darwin" },
+    { version = "^2.6.0", source = "pytorch-cuda", platform = "!=darwin" },
+]
+torchvision = [
+    { version = "^0.21.0", source = "PyPI", platform = "darwin" },
+    { version = "^0.21.0", source = "pytorch-cuda", platform = "!=darwin" },
+]
 
-
-torch = {version = "^2.6.0", platform = "darwin"}  # Mac version
-torchvision = {version = "0.21.0", platform = "darwin"}  # Mac version
-
-# Define the custom source for PyTorch with CUDA
 [[tool.poetry.source]]
-name = "torch-cuda"
-url = "https://download.pytorch.org/whl/cu126"  # Adjust CUDA version as needed
+name = "pytorch-cuda"
+url = "https://download.pytorch.org/whl/cu126"
 priority = "explicit"
-
-
-
-
 [tool.poetry.scripts]
 startGUI = 'AnalysisGUI.__main__:runApp'
 [build-system]

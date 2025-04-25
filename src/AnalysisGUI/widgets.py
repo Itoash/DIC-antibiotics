@@ -28,9 +28,10 @@ class FileExplorer(QtWidgets.QTreeView):
         self.model = QtWidgets.QFileSystemModel()
         self.model.setRootPath(QtCore.QDir.homePath())
         self.setModel(self.model)
+        self.setExpanded(self.model.index(QtCore.QDir.rootPath()), True)
+        self.setExpanded(self.model.index(os.path.join(QtCore.QDir.rootPath(),"Users")), True)
         self.setExpanded(self.model.index(QtCore.QDir.homePath()), True)
         self.resizeColumnToContents(0)
-        self.setExpanded(self.model.index(os.path.join(QtCore.QDir.homePath(),'Users')), True)
         self.resizeColumnToContents(0)
 
 # controls viewing of raw images
@@ -671,6 +672,7 @@ class Graph(pg.GraphItem):
                             newpos[0]-currentpos[0], newpos[1]-currentpos[1])
 
     def contextMenuEvent(self, event):
+        event.accept()
         self.menu = self.getMenu()
         self.menu.popup(event.screenPos())
         self.sigContextMenuOpened.emit()
