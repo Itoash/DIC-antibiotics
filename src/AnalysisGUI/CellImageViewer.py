@@ -63,6 +63,7 @@ class CellViewer(QtWidgets.QMainWindow):
         self.tree_widget.setHeaderLabel("Objects")
         self.tree_widget.setMinimumWidth(200)
         self.tree_widget.itemClicked.connect(self.on_object_selected)
+        self.tree_widget.itemSelectionChanged.connect(self.on_object_highlighted)
         self.main_splitter.addWidget(self.tree_widget)
         
         # Right side for images
@@ -180,6 +181,44 @@ class CellViewer(QtWidgets.QMainWindow):
         """Handle time change in DC view."""
         self.synchronize_time(time_idx, 'dc')
     
+    def on_object_highlighted(self):
+        """Handle object highlighting in the tree view."""
+        item = self.tree_widget.currentItem()
+        if item is None:
+            return
+            
+        obj_name = item.data(0, QtCore.Qt.UserRole)
+        self.current_object = obj_name
+        
+        # Clear existing contours
+        self.clear_contours()
+        
+        # Get object data
+        obj_data = self.data_dict.get(self.current_object, {})
+        if not obj_data:
+            return
+            
+        # Get the list of time values where this object appears
+        object_times = obj_data.get('times', [])
+        if not len(object_times):
+            return
+            
+        # Find the first time when the object appears
+        first_time = object_times[0]
+        
+        # Find the closest image index for this time
+        closest_idx = np.abs(self.globalTimes - first_time).argmin()
+        
+        # Snap to the first frame where the object appears
+        self.time_change_lock = True
+        self.current_time_value = first_time
+        self.current_image_index = closest_idx
+        self.ac_view.setCurrentIndex(closest_idx)
+        self.dc_view.setCurrentIndex(closest_idx)
+        self.time_change_lock = False
+        
+        # Update contours for the selected object
+        self.update_contours()
     def on_object_selected(self, item, column):
         """Handle object selection in the tree view."""
         obj_name = item.data(0, QtCore.Qt.UserRole)

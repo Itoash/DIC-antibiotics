@@ -20,7 +20,7 @@ from copy import deepcopy
 from numba import njit
 import os
 
-def get_warp(img1, img2, motion=cv2.MOTION_EUCLIDEAN):
+def get_warp(img1, img2, motion=cv2.MOTION_TRANSLATION):
     """Compute the warp matrix between two images."""
     imga = img1.copy().astype(np.float32)
     imgb = img2.copy().astype(np.float32)

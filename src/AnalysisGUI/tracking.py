@@ -184,14 +184,14 @@ class TrackWindow(QtWidgets.QMainWindow):
             DCs = self.analysisBuffer.DCs[:]
             labels = self.segBuffer.masks[:]
             times = self.analysisBuffer.abstimes[:]
-            print(times)
             times = list(sorted(times))
             times = np.asarray([t-times[0] for t in times]).astype(int)
             tic = tm.time()
             cell_data = process_cells(lineage, ACs, DCs, labels, times)
+            cell_keys = list(cell_data.keys())
+            cell_keys.sort()
+            cell_data = {i: cell_data[i] for i in cell_keys}
             print(f'Calculating per cell took {round(tm.time()-tic,3)} for {len(cell_data.keys())} cells.')
-            print(cell_data[list(cell_data.keys())[0]])
-            print(times)
             self.vis = CellViewer(cell_data,ACs,DCs,times)
             self.vis.show()
             
@@ -202,14 +202,15 @@ class TrackWindow(QtWidgets.QMainWindow):
             DCs = self.analysisBuffer.DCs[:]
             labels = self.segBuffer.masks[:]
             times = self.analysisBuffer.abstimes[:]
-            print(times)
             times = list(sorted(times))
             times = np.asarray([t-times[0] for t in times]).astype(int)
             tic = tm.time()
             cell_data = process_cells(lineage, ACs, DCs, labels, times)
+            cell_keys = list(cell_data.keys())
+            cell_keys.sort()
+            cell_data = {i: cell_data[i] for i in cell_keys}
             print(f'Calculating per cell took {round(tm.time()-tic,3)} for {len(cell_data.keys())} cells.')
             print(cell_data[list(cell_data.keys())[0]])
-            print(times)
             self.vis = DataVisualizerApp(cell_data)
             self.vis.show()
             

@@ -17,3 +17,7 @@ def runApp():
     imageViewer.resize(1600, 900)
     imageViewer.showMaximized()
     sys.exit(app.exec_())
+
+if __name__ == "__main__":
+    # If run directly, execute the main function
+    runApp()

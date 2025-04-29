@@ -115,9 +115,10 @@ class MainWindow(QtWidgets.QMainWindow):
             return
         # if there are, sort files and load images, put their sizes in set
         validfiles = list(sorted(validfiles, key=lambda x: int(x[-8:-4])))
+        tic = tm.time()
         images = [cv2.imread(os.path.join(filename, name), -1)
                   for name in validfiles]
-
+        print(f'Loading took {tm.time()-tic:.3f}s')
         image_sizes = set([img.shape for img in images])
 
         # Check 3: if image sizes are diffferent, print message and exit

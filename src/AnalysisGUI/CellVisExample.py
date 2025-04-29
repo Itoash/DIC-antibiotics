@@ -102,7 +102,7 @@ class DataVisualizerApp(QMainWindow):
             
             # Add attributes as children
             for attr_name in obj_data.keys():
-                if attr_name != 'times' and attr_name != 'position' and attr_name != 'Interior contour':  # Assuming 'time' might be a special key
+                if attr_name != 'times' and attr_name != 'position' and attr_name != 'Interior contour' and attr_name.lower() != 'total contour':  # Assuming 'time' might be a special key
                     attr_item = QTreeWidgetItem([attr_name])
                     obj_item.addChild(attr_item)
         

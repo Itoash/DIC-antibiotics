@@ -1,3 +1,4 @@
+
 [tool.poetry]
 name = "AnalysisGUI"
 version = "0.1.0"
@@ -15,11 +16,11 @@ generate-setup-file = false
 [tool.poetry.dependencies]
 python = ">=3.10,<3.13"
 numpy = "~1.26"
-pyqtgraph = "^0.13.7"
 pyqt5 = "^5.15.11"
+pyqtgraph = "^0.13.7"
 opencv-python = "^4.11.0.86"
 matplotlib = "^3.10.1"
-cython = "^3.0.12"
+cython = ">=3.0.12"
 natsort = "^8.4.0"
 aicsimageio = "^4.14.0"
 omnipose = { git = "https://github.com/kevinjohncutler/omnipose.git" }
@@ -28,21 +29,31 @@ loky = "^3.5.1"
 dill = "^0.3.9"
 networkit = "<11.1.post1"
 
-torch = [
-    { version = "^2.6.0", source = "PyPI", platform = "darwin" },
-    { version = "^2.6.0", source = "pytorch-cuda", platform = "!=darwin" },
-]
-torchvision = [
-    { version = "^0.21.0", source = "PyPI", platform = "darwin" },
-    { version = "^0.21.0", source = "pytorch-cuda", platform = "!=darwin" },
-]
+[tool.poetry-pyinstaller-plugin]
+# Disable [tool.poetry.include] and use plugin settings instead
+exclude-include = true
+
+[tool.poetry-pyinstaller-plugin.scripts]
+startGUI = 'src/AnalysisGUI/__main__.py'
+use-poetry-install = true
+windowed = true
+hidden_import = ["cellpose_omni","xsdata_pydantic_basemodel.hooks"]
+
+[tool.poetry-pyinstaller-plugin.collect]
+# Collect all submodules, data files & binaries for 'package_A' and 'package_B'
+all = ['cellpose_omni','xsdata_pydantic_basemodel.hooks']
+[tool.poetry.scripts]   
+startGUI = 'AnalysisGUI.__main__:runApp'
 
 [[tool.poetry.source]]
-name = "pytorch-cuda"
+name = "pytorch"
 url = "https://download.pytorch.org/whl/cu126"
 priority = "explicit"
-[tool.poetry.scripts]
-startGUI = 'AnalysisGUI.__main__:runApp'
+
+
+[tool.poetry.group.dev.dependencies]
+pyinstaller = "^6.13.0"
+
 [build-system]
-requires = ["poetry-core","Cython","setuptools","numpy"]
+requires = ["poetry-core","Cython","setuptools","numpy","pip"]
 build-backend = "poetry.core.masonry.api"

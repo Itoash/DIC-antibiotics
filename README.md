@@ -8,6 +8,7 @@ Most of the installation steps are the same on all platforms:
     * On Mac and Linux this usually comes prepackaged
 
 * Install Git on your platform (see official documentation and install guides here [here](https://git-scm.com))
+* **On CUDA-enabled machines:** Install a recent (12.x) version of Nvidia's CUDA Toolkit for GPU processing and segmentation
 * On your machine, create and activate a [Python virtual environment](https://docs.python.org/3/library/venv.html) using your method of choice
 * Download the archive and move it to the virtual environment folder
 

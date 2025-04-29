@@ -1,7 +1,11 @@
 import numpy as np
+import sys
 from AnalysisGUI.utils.ac_utils import get_AC_data
 import time as tm
-
+if sys.platform == 'darwin':
+    from AnalysisGUI.utils.ac_utils import get_AC_data
+else:
+    from AnalysisGUI.utils.ac_utils_cuda import get_AC_data
 
 # holder for all analysis data in current file (need to add past repr as well)
 class ImageHolder:

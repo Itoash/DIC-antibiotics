@@ -4,8 +4,13 @@ from setuptools import Distribution, Extension
 import numpy as np
 from Cython.Build import build_ext, cythonize
 import platform
-
-
+import subprocess
+system = platform.system()
+if system == "Windows":
+    subprocess.check_call(["pip", "install", "torch", "torchvision", "--index-url", "https://download.pytorch.org/whl/cu126"])
+    subprocess.check_call(["pip", "install", "cupy-cuda12x"])
+else:
+    subprocess.check_call(["pip", "install", "torch", "torchvision"])
 # Use absolute paths to avoid confusion
 base_dir = os.path.dirname(os.path.abspath(__file__))
 cython_dir = os.path.join(base_dir, "src", "AnalysisGUI", "utils")
@@ -31,7 +36,7 @@ ac_extension = Extension(
 seg_extension = Extension(
     "AnalysisGUI.utils.seg_utils",
     [seg_utils_path],
-    language="c",
+    language="c++",
     extra_compile_args=["-O3"],
     include_dirs=[np.get_include()],
     define_macros=[("NPY_NO_DEPRECATED_API", "NPY_1_7_API_VERSION")]
@@ -40,14 +45,14 @@ seg_extension = Extension(
 processor_extension = Extension(
     "AnalysisGUI.utils.cellprocessor",
     [processor_path],
-    language="c",
+    language="c++",
     extra_compile_args=["-O3"],
     include_dirs=[np.get_include()],
     define_macros=[("NPY_NO_DEPRECATED_API", "NPY_1_7_API_VERSION")]
 )
 
 extensions = [ac_extension, seg_extension,processor_extension]
-ext_modules = cythonize(extensions, include_path=[cython_dir], compiler_directives = {"language_level":3},annotate=True)
+ext_modules = cythonize(extensions, include_path=[cython_dir], compiler_directives = {"language_level":3})
 print(f"Cythonized modules: {ext_modules}")
 
 dist = Distribution({"ext_modules": ext_modules})

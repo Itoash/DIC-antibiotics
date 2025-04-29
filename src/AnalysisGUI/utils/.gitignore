@@ -7,3 +7,5 @@ __pycache__
 *.so
 *.html
 *.h
+cv_wrapper.*
+ac_utils.*

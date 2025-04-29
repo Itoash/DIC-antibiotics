@@ -349,8 +349,8 @@ cpdef get_AC_data(ndarray[float, ndim=3] images, float framerate=16.7, float tol
         series, framerate = parallel_interpolate3D(series, framerate, num_workers)
     
     # Detrend the time series if requested
-    if detr:
-        series = detrend(series, axis=0)
+    #if detr:
+       #series = detrend(series, axis=0)
     
     # Apply bandpass filtering if requested
     if filt:
@@ -362,4 +362,4 @@ cpdef get_AC_data(ndarray[float, ndim=3] images, float framerate=16.7, float tol
     # Create time array for output
     time = np.linspace(0, series.shape[0]/framerate, series.shape[0], dtype=np.float32)
     
-    return ACarray, DCarray, (time, series), (start, end)
+    return ACarray.astype(np.float64), DCarray.astype(np.float64), (time, series), (start, end)
