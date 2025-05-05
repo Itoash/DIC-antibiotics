@@ -355,7 +355,8 @@ cpdef get_AC_data(ndarray[float, ndim=3] images, float framerate=16.7, float tol
     # Apply bandpass filtering if requested
     if filt:
         series = parallel_bandpass3D(series, framerate, start=0.1, end=6, num_workers=num_workers)
-    
+    else:
+        series = series - DCarray
     # Calculate AC image
     ACarray = parallel_getACimage(series, framerate, frequency, num_workers)
     

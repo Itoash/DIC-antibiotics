@@ -135,12 +135,30 @@ class Signals(QtWidgets.QWidget):  # class for handling signal data and updating
         self.toolbar = QtWidgets.QToolBar()
         self.updateButton = QtWidgets.QAction("Update Analysis..", self)
         self.updateButton.setStatusTip("Redo limits and update analysis")
-        self.updateButton.triggered.connect(self.updateLimits)
+        self.updateButton.triggered.connect(self.updateAnalysis)
         self.toolbar.addAction(self.updateButton)
         self.resetButton = QtWidgets.QAction("Reset Analysis", self)
         self.resetButton.setStatusTip("Reset limits to 0,end")
-        self.resetButton.triggered.connect(self.resetLimits)
+        self.resetButton.triggered.connect(self.resetAnalysis)
         self.toolbar.addAction(self.resetButton)
+
+        self.freqLabel = QtWidgets.QAction("Frequency [Hz]:")
+        self.freqLabel.setStatusTip("Set frequency in Hz")
+        self.toolbar.addAction(self.freqLabel)
+        self.freqIn = QtWidgets.QLineEdit(str(1))
+        self.freqIn.setMaxLength(4)
+        self.freqIn.setMaximumWidth(50)
+        self.toolbar.addWidget(self.freqIn)
+        
+        self.interpButton = QtWidgets.QCheckBox("Interpolate", self)
+        self.interpButton.setStatusTip("Interpolate signal")
+        self.interpButton.setChecked(True)
+        self.toolbar.addWidget(self.interpButton)
+
+        self.filtButton = QtWidgets.QCheckBox("Filter", self)
+        self.filtButton.setStatusTip("Filter signal")
+        self.filtButton.setChecked(True)
+        self.toolbar.addWidget(self.filtButton)
 
         # sets up plots
         self.signalPlot = pg.PlotWidget(title='Averaged signal', labels={
@@ -168,6 +186,7 @@ class Signals(QtWidgets.QWidget):  # class for handling signal data and updating
         self.region.sigRegionChanged.connect(self.updateRegions)
         self.minX = 0
         self.maxX = self.time[-1]
+        self.limits = (0,len(self.time))
         self.region.setRegion((0, self.time[-1]))
         self.region.setBounds((0, self.time[-1]))
 
@@ -179,20 +198,35 @@ class Signals(QtWidgets.QWidget):  # class for handling signal data and updating
         self.layout.addWidget(self.FFTPlot)
         self.show()
 
-    def resetLimits(self):
+    def resetAnalysis(self):
         # reset limits from imagesource raws: those never change, and we can get back to start
         limits = (0, int(len(self.imageSource.raws)))
-        self.imageSource.changeLimits(limits)
+        print(f'set new limits {limits}')
+        frequency = 1.0
+        filt = True
+        interp = True
+        self.freqIn.setText(str(frequency))
+        self.interpButton.setChecked(interp)
+        self.filtButton.setChecked(filt)
 
-    def updateLimits(self):
+        self.imageSource.reanalyze(limits=limits,filt = filt,interp = interp, frequency=frequency,hardlimits = False)
+    
+    def updateAnalysis(self):
         # set limits to those enclosed by the region; minX/maxX are updated on region move
-        self.imageSource.changeLimits(
-            (int(self.minX/self.dt), int(self.maxX/self.dt)))
+        self.updateRegions()
+        limits = (int(round(self.minX*self.imageSource.framerate))+self.imageSource.limits[0], int(round(self.maxX*self.imageSource.framerate))+self.imageSource.limits[0])
+        print(f'set new limits {limits}')
+        self.imageSource.reanalyze(limits=self.limits,
+                                  frequency=float(self.freqIn.text()),
+                                  interp=self.interpButton.isChecked(),
+                                  filt=self.filtButton.isChecked())
 
     def updateRegions(self):
         # here we update region limits in case we want to redo analysis
         self.minX, self.maxX = self.region.getRegion()
-
+        minindex = np.abs( self.time- self.minX).argmin()
+        maxindex = np.abs( self.time- self.maxX).argmin()
+        self.limits = (minindex, maxindex+1)
     def getFFT(self):
         # small method for quickly geting fft without having to write this everytime
         self.fft = np.fft.fft(self.sig)
@@ -223,8 +257,12 @@ class Signals(QtWidgets.QWidget):  # class for handling signal data and updating
         self.region.sigRegionChanged.connect(self.updateRegions)
         self.minX = 0
         self.maxX = self.time[-1]
+        self.limits = (0,len(self.time))
         self.region.setRegion([self.minX, self.maxX])
         self.region.setBounds((0, self.time[-1]))
+        self.freqIn.setText(str(self.imageSource.frequency))
+        self.interpButton.setChecked(self.imageSource.interpolate)
+        self.filtButton.setChecked(self.imageSource.filter)
 
 
 # fairly standard extension of ImageView, includes tooltip px values and links to ROI-to-signal

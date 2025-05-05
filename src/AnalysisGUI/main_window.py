@@ -4,7 +4,7 @@ from pyqtgraph.dockarea.Dock import Dock
 from pyqtgraph.dockarea.DockArea import DockArea
 from pyqtgraph.Qt import QtWidgets, QtCore
 from copy import deepcopy
-from AnalysisGUI.CellImageViewer import CellViewer
+from AnalysisGUI.cell_viewer import CellViewer
 import os
 import cv2
 import time as tm
@@ -143,7 +143,7 @@ class MainWindow(QtWidgets.QMainWindow):
         except IndexError:
             framerate = int(fps[0])
         # limits are endpoints
-        limits = (100, len(images)-1)
+        limits = (0, len(images)-1)
         images = np.asarray(images)
         _,codename = os.path.split(filename)
         print(codename)
@@ -151,6 +151,9 @@ class MainWindow(QtWidgets.QMainWindow):
         self.imageData.setRaws(images)  # change raw image data
         self.imageData.limits = limits  # change limits in imageData object
         self.imageData.framerate = framerate  # change frate in imageData object
+        self.imageData.frequency = 1  # set default frequency
+        self.imageData.interpolate = True  # set default interpolation
+        self.imageData.filter = True  # set default filter
         self.imageData.update()  # update images internally (run AC)
         self.updateAnalysis()  # update Plots
 
@@ -325,6 +328,8 @@ class MainWindow(QtWidgets.QMainWindow):
             self.segmentor.close()
         if 'tracker' in self.__dict__.keys():
             self.tracker.close()
+        import gc
+        gc.collect()
         self.close()
 
     def createMenu(self):

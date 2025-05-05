@@ -156,8 +156,6 @@ class CellViewer(QtWidgets.QMainWindow):
             self.current_image_index = int(time_or_index)
             self.current_time_value = self.globalTimes[self.current_image_index]
         
-        print(f"Time synchronized: index={self.current_image_index}, time={self.current_time_value}")
-        
         # Update the other view without triggering its own signal
         if source == 'ac' and self.dc_view.image is not None:
             self.dc_view.setCurrentIndex(self.current_image_index)

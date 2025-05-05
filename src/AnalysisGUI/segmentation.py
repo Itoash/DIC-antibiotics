@@ -52,8 +52,17 @@ class SegmentWindow(QtWidgets.QMainWindow):
         self.Segplot.autoRange()
         
     def deleteImage(self):
+        """Delete the current image and associated data."""
         currentIdx = self.DCplot.currentIndex
+        
+        # Only delete if buffers are in sync
         if len(self.segBuffer.images) == len(self.analysisBuffer.DCs):
+            if len(self.segBuffer.images) == 1:
+
+                print('Cannot delete last image')
+                return
+            # Remove the current image and associated data
+            print('Deleting image...')
             self.segBuffer.images.pop(currentIdx)
             self.segBuffer.masks.pop(currentIdx)
             self.analysisBuffer.ACs.pop(currentIdx)
@@ -61,6 +70,7 @@ class SegmentWindow(QtWidgets.QMainWindow):
             self.analysisBuffer.names.pop(currentIdx)
             self.analysisBuffer.times.pop(currentIdx)
             self.analysisBuffer.abstimes.pop(currentIdx)
+            
         self.resetImages()
             
     def resetImages(self):

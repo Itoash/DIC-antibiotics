@@ -151,14 +151,13 @@ class DataVisualizerApp(QMainWindow):
                     if param_name in obj_data:
                         # Get time values (x-axis)
                         time_values = self.data_dict[obj_name].get('times', list(range(len(self.data_dict[obj_name][param_name]))))
-                        print(time_values)
+                        
                         # Update min/max time
                         min_time = min(min_time, min(time_values))
                         max_time = max(max_time, max(time_values))
                         
                         # Get attribute values (y-axis)
                         attr_values = self.data_dict[obj_name][param_name]
-                        print(attr_values)
                         # Create plot with a unique name (object_attribute)
                         pen = pg.mkPen(color=colors[color_idx % len(colors)], width=2)
                         

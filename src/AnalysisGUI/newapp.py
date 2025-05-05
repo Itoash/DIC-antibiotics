@@ -12,7 +12,7 @@ from pyqtgraph.dockarea.Dock import Dock
 from pyqtgraph.dockarea.DockArea import DockArea
 from pyqtgraph.Qt import QtWidgets, QtCore
 from copy import deepcopy
-from AnalysisGUI.CellImageViewer import CellViewer
+from AnalysisGUI.cell_viewer import CellViewer
 import os
 import cv2
 import platform
@@ -20,7 +20,7 @@ from AnalysisGUI.utils.TrackerModule import obtain_network, stabilize_images
 from AnalysisGUI.utils.seg_utils import segmentDComni
 from AnalysisGUI.utils.ac_utils import get_AC_data
 import time as tm
-from AnalysisGUI.CellVisExample import DataVisualizerApp
+from AnalysisGUI.timeseries_viewer import DataVisualizerApp
 from AnalysisGUI.utils.cellprocessor import process_cells
 from copy import deepcopy
 

@@ -119,7 +119,8 @@ def get_AC_data(images, framerate=16.7,  tolerance=0.2,
     if filt:
         butterfilt = butter(4, btype='bandpass', fs=framerate, Wn=cp.array([0.1, 6], dtype=np.float32), output='sos')
         series = sosfiltfilt(butterfilt, series, axis=0)
-    
+    else:
+        series = series - DCarray
     # Calculate AC image
     series_fft = cp.fft.fft(series, axis=0)
     nfft = series_fft.shape[0]

@@ -21,6 +21,8 @@ class ImageHolder:
         self.framerate = framerate
         self.frequency = frequency
         self.limits = limits
+        self.interpolate = True
+        self.filter = True
         self.codename = "Startup"
         # run update upon startup to generate images
         self.update(hardlimits=True)
@@ -35,10 +37,28 @@ class ImageHolder:
                                                            framerate=self.framerate,
                                                            start=self.limits[0],
                                                            end=self.limits[1],
-                                                           hardlimits=hardlimits)
+                                                           hardlimits=hardlimits,interpolation=self.interpolate,filt = self.filter)
         toc = tm.time()-tic
-        print(f"Processing took {toc}:.3f s")
+        print(f"Processing took {toc:.3f} s")
 
+    def reanalyze(self,frequency = None,
+                  limits = None, interp = None,filt = None,hardlimits = False):
+        # reanalyze with new parameters
+        if limits is not None:
+            self.limits = limits
+        if frequency is not None:
+            self.frequency = frequency
+        if interp is not None:
+            self.interpolate = interp
+        if filt is not None:  
+            self.filter = filt
+        print(f'new frequency {self.frequency}')
+        print(f'new limits {self.limits}')
+        print(f'new interpolation {self.interpolate}')
+        print(f'new filter {self.filter}')
+        print(f'framerate {self.framerate}')
+        self.update(hardlimits=hardlimits)
+        self.parent.updateAnalysis()
     def changeLimits(self, newlimits):
         self.limits = newlimits
         print(f'set new limits {self.limits}')

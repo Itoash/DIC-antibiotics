@@ -16,7 +16,7 @@ import dill as pickle
 FEATURE_NAMES = ['idx', 'times', 'position', 'area', 'Ellipse angle', 'Ellipse major',
                'Ellipse minor', 'DC mean', 'DC min', 'DC max', 'AC mean', 'AC min', 'AC max',
                'AC interior area', 'AC interior mean', 'AC contour mean',
-               'AC interior/back contrast', 'AC interior/contour contrast', 'AC solidity', 
+               'AC interior/back contrast', 'AC interior/contour contrast', 'AC?DC mean ratio','AC solidity', 
                'Interior contour', 'Total contour']
 
 # Add proper boolean type for numpy arrays
@@ -201,6 +201,7 @@ cdef list process_label(np.ndarray AC, np.ndarray DC, np.ndarray label, float co
     cdef double contourmean = 0.0
     cdef double intbackcontrast = 0.0
     cdef double intcontcontrast = 0.0
+    cdef double ACDCratio = 0.0
     cdef double solidity = 0.0
     cdef np.ndarray intcontour = np.array([[0, 0]])
     cdef np.ndarray contour = np.array([[0, 0]])
@@ -292,12 +293,15 @@ cdef list process_label(np.ndarray AC, np.ndarray DC, np.ndarray label, float co
                 denom2 = interiormean + contourmean
                 if denom2 != 0:
                     intcontcontrast = (interiormean - contourmean) / denom2
-
+                denom3 = DCmean
+                if denom3 != 0:
+                    ACDCratio = interiormean/DCmean
+                
                 solidity = interiorarea / area if area > 0 else 0
     
     return [com, area, angle, major, minor, DCmean, DCmin, DCmax,
             ACmean, ACmin, ACmax, interiorarea, interiormean, contourmean,
-            intbackcontrast, intcontcontrast, solidity, intcontours, contour]
+            intbackcontrast, intcontcontrast, ACDCratio, solidity, intcontours, contour]
 
 
 cdef tuple findInterior(np.ndarray[FLOAT64_t, ndim=2] image, np.ndarray[BOOL_t, ndim=2] cell_mask, 

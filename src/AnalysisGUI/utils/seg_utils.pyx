@@ -34,7 +34,7 @@ def segmentDComni(list imgs):
         'channels': chans,
         'rescale': None,
         'mask_threshold': -2,
-        'flow_threshold': 0.4,
+        'flow_threshold': 0.99,
         'transparency': False,
         'omni': True,
         'cluster': False,
