@@ -20,15 +20,15 @@ ac_utils_path = os.path.join(cython_dir, "ac_utils2.pyx")
 seg_utils_path = os.path.join(cython_dir, "seg_utils.pyx")
 processor_path = os.path.join(cython_dir,"cellprocessor.pyx")
 
-print(f"Checking if ac_utils.pyx exists at: {ac_utils_path} -> {os.path.exists(ac_utils_path)}")
-print(f"Checking if seg_utils.pyx exists at: {seg_utils_path} -> {os.path.exists(seg_utils_path)}")
+# print(f"Checking if ac_utils.pyx exists at: {ac_utils_path} -> {os.path.exists(ac_utils_path)}")
+# print(f"Checking if seg_utils.pyx exists at: {seg_utils_path} -> {os.path.exists(seg_utils_path)}")
 
 # Use full module names
 ac_extension = Extension(
     "AnalysisGUI.utils.ac_utils",
     [ac_utils_path],
-    language="c",
-    extra_compile_args=["-O3","-march=native","-mtune=native"],
+    language="c++",
+    extra_compile_args=["-O3","-ffast-math","-march=native","-mtune=native"],
     include_dirs=[np.get_include()],
     define_macros=[("NPY_NO_DEPRECATED_API", "NPY_1_7_API_VERSION")]
 )
@@ -60,20 +60,20 @@ cmd = build_ext(dist)
 cmd.ensure_finalized()
 cmd.run()
 
-# Copy the built extensions to the src directory structure
-for output in cmd.get_outputs():
-    # Extract just the filename
-    filename = os.path.basename(output)
+# # Copy the built extensions to the src directory structure
+# for output in cmd.get_outputs():
+#     # Extract just the filename
+#     filename = os.path.basename(output)
     
-    # Determine the target directory within src
-    module_path = output.split(os.path.join('AnalysisGUI','utils'))[0]
-    target_dir = os.path.join(base_dir, "src", "AnalysisGUI", "utils")
+#     # Determine the target directory within src
+#     module_path = output.split(os.path.join('AnalysisGUI','utils'))[0]
+#     target_dir = os.path.join(base_dir, "src", "AnalysisGUI", "utils")
     
-    # Create target directory if it doesn't exist
-    os.makedirs(target_dir, exist_ok=True)
+#     # Create target directory if it doesn't exist
+#     os.makedirs(target_dir, exist_ok=True)
     
-    # Copy to the target location
-    target_path = os.path.join(target_dir, filename)
-    print(f"Copying {output} -> {target_path}")
-    shutil.copyfile(output, target_path)
+#     # Copy to the target location
+#     target_path = os.path.join(target_dir, filename)
+#     print(f"Copying {output} -> {target_path}")
+#     shutil.copyfile(output, target_path)
 

@@ -5,10 +5,11 @@ from PyQt5.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout,
                             QHBoxLayout, QTreeWidget, QTreeWidgetItem, QSplitter,
                             QPushButton, QLabel, QGroupBox, QCheckBox)
 from PyQt5.QtCore import Qt
+from PyQt5 import QtCore
 
 class DataVisualizerApp(QMainWindow):
-    def __init__(self, data_dict):
-        super().__init__()
+    def __init__(self, data_dict,parent):
+        super().__init__(parent=parent)
         self.data_dict = data_dict
         self.show_all_objects = False
         self.init_ui()
@@ -33,7 +34,10 @@ class DataVisualizerApp(QMainWindow):
         self.tree_widget = QTreeWidget()
         self.tree_widget.setHeaderLabels(['Objects/Attributes'])
         self.populate_tree()
-        self.tree_widget.itemSelectionChanged.connect(self.update_plot)
+        self.update_timer = QtCore.QTimer()
+        self.update_timer.setSingleShot(True)
+        self.update_timer.timeout.connect(self.update_plot)
+        self.tree_widget.itemSelectionChanged.connect(lambda: self.update_timer.start(100))
         left_layout.addWidget(self.tree_widget)
         
         # Add multi-object selection checkbox
@@ -129,7 +133,14 @@ class DataVisualizerApp(QMainWindow):
             return
         
         # Set different colors for each plot line
-        colors = ['b', 'r', 'g', 'c', 'm', 'y', 'k']
+        # colors = ['b', 'r', 'g', 'c', 'm', 'y', 'k']
+        # color_idx = 0
+        keys = list(self.data_dict.keys())
+        keys = [str(k.split('_')[1]) for k in keys]
+        keys = list(set(keys))
+
+        colors = pg.colormap.get('rainbow',source='matplotlib')
+        colormap = {k:colors[i/(len(keys))] for i,k in enumerate(keys)}
         color_idx = 0
         
         # Track min/max time values to set region boundaries
@@ -159,7 +170,7 @@ class DataVisualizerApp(QMainWindow):
                         # Get attribute values (y-axis)
                         attr_values = self.data_dict[obj_name][param_name]
                         # Create plot with a unique name (object_attribute)
-                        pen = pg.mkPen(color=colors[color_idx % len(colors)], width=2)
+                        pen = pg.mkPen(color=colormap[obj_name.split('_')[1]], width=2)
                         
                         # Add to main plot
                         plot_item = self.plot.plot(time_values, attr_values, name=f"{obj_name}_{param_name}", 
@@ -190,7 +201,7 @@ class DataVisualizerApp(QMainWindow):
                     attr_values = self.data_dict[obj_name][attr_name]
                     
                     # Create plot with a unique name (object_attribute)
-                    pen = pg.mkPen(color=colors[color_idx % len(colors)], width=2)
+                    pen = pg.mkPen(color=colors[obj_name.split('_')[1]], width=2)
                     
                     # Add to main plot
                     plot_item = self.plot.plot(time_values, attr_values, name=f"{obj_name}_{attr_name}", 

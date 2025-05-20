@@ -143,17 +143,13 @@ class MainWindow(QtWidgets.QMainWindow):
         except IndexError:
             framerate = int(fps[0])
         # limits are endpoints
-        limits = (0, len(images)-1)
+        limits = (100, len(images)-1)
         images = np.asarray(images)
         _,codename = os.path.split(filename)
         print(codename)
         self.imageData.codename = codename
+        self.imageData.limits = limits  # set limits
         self.imageData.setRaws(images)  # change raw image data
-        self.imageData.limits = limits  # change limits in imageData object
-        self.imageData.framerate = framerate  # change frate in imageData object
-        self.imageData.frequency = 1  # set default frequency
-        self.imageData.interpolate = True  # set default interpolation
-        self.imageData.filter = True  # set default filter
         self.imageData.update()  # update images internally (run AC)
         self.updateAnalysis()  # update Plots
 
@@ -166,6 +162,8 @@ class MainWindow(QtWidgets.QMainWindow):
             msg.setWindowTitle("IndexError")
             msg.exec_()
             return
+        if 'segmentor' in self.__dict__.keys():
+            self.segmentor.close()
         self.segmentor = SegmentWindow(self.segBuffer,self.analysisImages)
         self.segmentor.show()
 
@@ -178,60 +176,60 @@ class MainWindow(QtWidgets.QMainWindow):
             msg.setWindowTitle("IndexError")
             msg.exec_()
             return
-        self.tracker = TrackWindow(self.segBuffer, self.analysisImages)
+        if 'tracker' in self.__dict__.keys():
+            self.tracker.close()
+        self.tracker = TrackWindow(self.segBuffer, self.analysisImages,parent=self)
         self.tracker.show()
 
+    def save(self):
+        # save the current image to a file
+        filename = QtWidgets.QFileDialog.getExistingDirectory(self, "Save Cell data" )
+        if filename and 'tracker' in self.__dict__.keys() and self.tracker is not None:
+            self.tracker.saveCells(filename)
     def addImages(self):
         options = QtWidgets.QFileDialog.Options()
         filename = QtWidgets.QFileDialog.getExistingDirectory(
             self, "Open File", QtCore.QDir.currentPath())
-        if not os.path.isdir(filename):
-            QtWidgets.QApplication.restoreOverrideCursor()
-            msg = QtWidgets.QMessageBox()
-            msg.setIcon(QtWidgets.QMessageBox.Critical)
-            msg.setText("Not a directory!")
-            msg.setInformativeText(
-                'Please select a directory containing image data of the same dimensions!')
-            msg.setWindowTitle("TypeError")
-            msg.exec_()
-            return
+        if filename:
+            self.clearBuffer()
+            ACpath = [f for f in os.listdir(filename) if 'ac' in f.lower()][0]
+            DCpath = [f for f in os.listdir(filename) if 'dc' in f.lower()][0]
+            segpath = [f for f in os.listdir(filename) if 'seg' in f.lower()][0]
+            datapath = [f for f in os.listdir(filename) if 'data' in f.lower() and f.endswith('.csv')][0]
+            with open(os.path.join(filename,datapath),'r') as file:
+                lines = file.readlines()
+                times = []
+                for line in lines:
+                    if 'times' in line:
+                        times+= line.strip().split(',')[1:]
+                times = [float(t) for t in times]
+                times = list(set(times))
+                times = list(sorted(times))
+                        
+            ACs = []
+            DCs = []
+            segs = []
+            _,ACs = cv2.imreadmulti(os.path.join(filename, ACpath), ACs, -1)
+            _,DCs = cv2.imreadmulti(os.path.join(filename, DCpath),DCs, -1)
+            _,segs = cv2.imreadmulti(os.path.join(filename, segpath),segs, -1)
+            ACs = [i.astype(float) for i in ACs]
+            DCs = [i.astype(float) for i in DCs]
+            segs = [i.astype(float) for i in segs]
+            print(f"Loaded {len(ACs)} images")
+            print(type(DCs))
+            self.segBuffer.images = list(DCs)[:]
+            self.segBuffer.masks = list(segs)[:]
+            self.analysisImages.ACs = list(ACs)[:]
+            self.analysisImages.DCs = list(DCs)[:]
+            self.analysisImages.names = [str(i) for i in times]
+            self.analysisImages.times = times[:]
+            self.analysisImages.abstimes = times[:]
+            print(f"Loaded {len(self.analysisImages.ACs)} images")
+            
+        
+            
 
-        # Check 1 passed: scan names to see if there are valid file formats one level down
-        files = [f for f in os.listdir(filename) if f != '.DS_Store']
-        validformats = ['png', 'tif', 'jpg']
 
-        validfiles = [f for f in files if f.split('.')[-1] in validformats]
-
-        # Check 2: see if there are any valid files; if not, display message and abort
-        if len(validfiles) == 0:
-
-            msg = QtWidgets.QMessageBox()
-            msg.setIcon(QtWidgets.QMessageBox.Critical)
-            msg.setText("No valid files!")
-            msg.setInformativeText(
-                'Chosen directory contains no valid image files (*.tif,*.png,*.jpg)')
-            msg.setWindowTitle("TypeError")
-            msg.exec_()
-
-            return
-        # if there are, sort files and load images, put their sizes in set
-        validfiles = list(sorted(validfiles))
-        images = [cv2.imread(os.path.join(filename, name), -1)
-                  for name in validfiles]
-        image_sizes = set([img.shape for img in images])
-
-        # Check 3: if image sizes are diffferent, print message and exit
-        if len(image_sizes) != 1:
-
-            msg = QtWidgets.QMessageBox()
-            msg.setIcon(QtWidgets.QMessageBox.Critical)
-            msg.setText("Images have different sizes!")
-            msg.setInformativeText(
-                'Chosen directory contains images of different sizes.)')
-            msg.setWindowTitle("SizeError")
-            msg.exec_()
-            return
-        self.segBuffer.addMultipleImages(images)
 
     def loadDay(self):
         index = self.docks.treeview.currentIndex()
@@ -301,6 +299,8 @@ class MainWindow(QtWidgets.QMainWindow):
         # make actions and shortcuts for important top-level commands
         self.openAct = QtWidgets.QAction(
             "&Open...", self, shortcut="Ctrl+O", triggered=self.open)
+        self.saveAct = QtWidgets.QAction(
+            "&Save...", self, shortcut="Ctrl+S", triggered=self.save)
         self.loadAct = QtWidgets.QAction(
             "&Load Stack", self, shortcut="Ctrl+L", triggered=self.loadstack)
         self.loadDayAct = QtWidgets.QAction(
@@ -336,6 +336,7 @@ class MainWindow(QtWidgets.QMainWindow):
         # display commands in menubar
         self.fileMenu = QtWidgets.QMenu("&File", self)
         self.fileMenu.addAction(self.openAct)
+        self.fileMenu.addAction(self.saveAct)
         self.fileMenu.addAction(self.loadAct)
         self.fileMenu.addAction(self.loadDayAct)
         self.fileMenu.addSeparator()

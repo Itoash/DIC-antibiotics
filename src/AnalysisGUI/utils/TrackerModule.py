@@ -547,7 +547,7 @@ def checkifunder(array, name):
               " at positions "+str(np.argwhere(array > 1)))
 
 
-def evaluatecandidates(distancetoothers, overlaps, anglestoothers, areatoothers, arstoothers, name, frame, minoverlap=0.15, th=0, weights=[1, 1, 1, 1, 1]):
+def evaluatecandidates(distancetoothers, overlaps, anglestoothers, areatoothers, arstoothers, name, frame, minoverlap=0.10, th=0, weights=[1, 1, 1, 1, 1]):
     # distancetoothers: 1D array in label order
     # overlaps: 2D array with labels in frst dim and overlaps in second dim
     # anglestoothers: 1D array with angle ratio
@@ -1099,6 +1099,11 @@ class imagenetwork:
         for node in self.nodes:
             if len(node.likelyparent) > 1:
                 # choose parent with highest overlap
+                # selfscore = []
+                # for par in node.likelyparent:
+                #     selfscore.append([el[1] for el in par.likelychildrenweights.items() if el[0] == node.name])
+                # best_parent_index = np.argmax(selfscore)
+                # best_parent_name = np.array(node.likelyparent)[best_parent_index].name
                 best_parent_index = np.argmax(node.backwardsoverlaps[1, :])
                 best_parent_name = node.backwardsoverlaps[0, best_parent_index]
                 badparents = [
@@ -1261,6 +1266,17 @@ class imagenetwork:
         removal_list = []
         for n in self.nodes:
             if n.major/n.minor < ar:
+                removal_list.append([n.frame,n.name])
+        return removal_list
+    def filterByLineage(self, lineage =None):
+        if lineage is None:
+            return []
+        else:
+            removal_list = []
+        
+        for n in self.nodes:
+
+            if lineage in n.trackname and lineage.split("_")[1] == n.trackname.split("_")[1]: 
                 removal_list.append([n.frame,n.name])
         return removal_list
     def filterByArea(self,area = 100):

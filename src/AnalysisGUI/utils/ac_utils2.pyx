@@ -80,7 +80,7 @@ cdef ndarray filter_chunk(ndarray[float, ndim=3] chunk, ndarray[float, ndim=2] s
     return sosfiltfilt(sos, chunk, axis=0).astype(np.float32)
 
 
-cdef tuple figure_limits(ndarray[float, ndim=3] series, float framerate, int start, int end):
+cdef tuple figure_limits(ndarray[float, ndim=3] series, float framerate, float frequency, int start, int end):
     """Determine optimal start and end indices for analysis.
     
     Args:
@@ -124,7 +124,7 @@ cdef tuple figure_limits(ndarray[float, ndim=3] series, float framerate, int sta
     start = int(selectedrange[0])
     end = int(selectedrange[1])
     
-    nperiods = (end-start)/framerate
+    nperiods = (end-start)/framerate*frequency
     nperiods = floor(nperiods)
     
     return start, end, nperiods
@@ -326,15 +326,14 @@ cpdef get_AC_data(ndarray[float, ndim=3] images, float framerate=16.7, float tol
     
     # Get optimal start and end indices
     if not hardlimits:
-        start, end, nperiods = figure_limits(series, framerate, start, end)
+        start, end, nperiods = figure_limits(series, framerate, frequency, start, end)
     else:
         nperiods = periods
-    
     # Adjust end index based on number of periods
-    newlastindex = int(round(nperiods * framerate))
+    newlastindex = int(round(nperiods/frequency * framerate))
     while (newlastindex + start > end):
         nperiods -= 1
-        newlastindex = int(round(nperiods * framerate))
+        newlastindex = int(round(nperiods/frequency * framerate))
     
     end = newlastindex + start
     

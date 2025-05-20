@@ -24,7 +24,7 @@ class CellViewer(QtWidgets.QMainWindow):
         parent : QWidget, optional
             Parent widget
         """
-        super().__init__(parent)
+        super().__init__(parent=parent)
         self.data_dict = data_dict
         self.ac_images = ac_images
         self.dc_images = dc_images

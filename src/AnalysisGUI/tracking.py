@@ -22,7 +22,7 @@ class TrackWindow(QtWidgets.QMainWindow):
     """
     sigKeyPressed = QtCore.Signal(object)  # Signal for key press events
 
-    def __init__(self, segBuffer, analysisBuffer, stabilize=True):
+    def __init__(self, segBuffer, analysisBuffer, parent = None,stabilize=False):
         """
         Initialize the TrackWindow with image buffers and analysis data.
         
@@ -35,7 +35,7 @@ class TrackWindow(QtWidgets.QMainWindow):
         stabilize : bool, optional
             Whether to stabilize the images (reduce movement between frames)
         """
-        super().__init__()
+        super().__init__(parent=parent)
         self.segBuffer = segBuffer
         self.analysisBuffer = analysisBuffer
         self.brushsize = 3
@@ -251,6 +251,7 @@ class TrackWindow(QtWidgets.QMainWindow):
         self.Graph.sigPointDeselected.connect(self.switchoffHighlight)
         self.Graph.sigNodesLinked.connect(self.linkNodes)
         self.Graph.sigNodeDisconnected.connect(self.unlinkNode)
+        self.Graph.sigDeletedLineage.connect(self.deleteLineage)
         self.Graph.sigContextMenuOpened.connect(self.supersedeRClick)
         
         # Custom event handlers for key press and mouse drag
@@ -372,6 +373,42 @@ class TrackWindow(QtWidgets.QMainWindow):
                         text=text, size=15, meta=meta)
         self.Graph.updateGraph()
     
+    def deleteLineage(self, nodename):
+        """Delete a lineage from the cell lineage graph."""
+        currentIdx = self.DCplot.currentIndex
+        self.switchoffHighlight(0)
+        self.Graph.selectedIndices = None
+        overlays = self.DCplot.overlay
+        remove_list = self.imagenet.filterByLineage(
+                    nodename)
+        tic = tm.time()
+        for node in remove_list:
+            k = overlays[int(node[0]), :, :]
+            k[k == float(node[1])] = 0
+            overlays[int(node[0]), :, :] = k
+        print(f'Removing nodes from array took {round(tm.time()-tic,3)}s')
+        
+        # Rescale remaining labels
+        for i in range(overlays.shape[0]):
+            self.DCplot.setCurrentIndex(i)
+            self.DCplot.rescaleLabels()
+        
+        # Update display and network
+        
+        self.DCplot.setImage(np.asarray(self.segBuffer.images), axes={
+                             't': 0, 'x': 2, 'y': 1, 'c': None})
+        self.DCplot.setOverlay(overlays)
+        self.DCplot.updateImage()
+        self.DCplot.setCurrentIndex(currentIdx)
+        # Recompute network
+        self.imagenet = obtain_network(
+            [overlays[i, :, :] for i in range(overlays.shape[0])])
+        graphnodes, graphedges, text, meta = self.imagenet.exportGraph()
+        self.Graph.setData(pos=graphnodes, adj=graphedges,
+                        text=text, size=15, meta=meta)
+        self.switchoffHighlight(0)
+        
+
     def rescaledLabels(self, oldlabels, newlabels, currIdx):
         """Update the network after rescaling labels."""
         self.imagenet.reassignLabels(oldlabels, newlabels, currIdx)
@@ -397,6 +434,7 @@ class TrackWindow(QtWidgets.QMainWindow):
     
     def filterNodes(self):
         """Filter cells based on selected criteria."""
+        currentIdx = self.DCplot.currentIndex
         overlays = self.DCplot.overlay
         choice = self.combobox.currentIndex()
         
@@ -431,7 +469,7 @@ class TrackWindow(QtWidgets.QMainWindow):
                              't': 0, 'x': 2, 'y': 1, 'c': None})
         self.DCplot.setOverlay(overlays)
         self.DCplot.updateImage()
-        
+        self.DCplot.setCurrentIndex(currentIdx)
         # Recompute network
         self.imagenet = obtain_network(
             [overlays[i, :, :] for i in range(overlays.shape[0])])
@@ -491,8 +529,9 @@ class TrackWindow(QtWidgets.QMainWindow):
             self.analysisBuffer.abstimes.pop(currentIdx)
             
         # Update the network and images
-        self.recomputeNet()
         self.resetImages()
+        self.recomputeNet()
+        self.switchoffHighlight(0)
 
     #########################
     # Drawing Tool Methods  #
@@ -586,7 +625,7 @@ class TrackWindow(QtWidgets.QMainWindow):
             print(f'Calculating per cell took {round(tm.time()-tic,3)} for {len(cell_data.keys())} cells.')
             
             # Open the visualizer
-            self.vis = CellViewer(cell_data, ACs, DCs, times)
+            self.vis = CellViewer(cell_data, ACs, DCs, times,self)
             self.vis.show()
             
     def openTimeSeries(self):
@@ -601,7 +640,8 @@ class TrackWindow(QtWidgets.QMainWindow):
             times = self.analysisBuffer.abstimes[:]
             times = list(sorted(times))
             times = np.asarray([t-times[0] for t in times]).astype(int)
-            
+            print(len(times))
+            print(len(ACs))
             # Process cell data
             tic = tm.time()
             cell_data = process_cells(lineage, ACs, DCs, labels, times)
@@ -611,5 +651,52 @@ class TrackWindow(QtWidgets.QMainWindow):
             print(f'Calculating per cell took {round(tm.time()-tic,3)} for {len(cell_data.keys())} cells.')
             
             # Open the visualizer
-            self.vis = DataVisualizerApp(cell_data)
+            self.vis = DataVisualizerApp(cell_data,self)
             self.vis.show()
+
+    def saveCells(self,path):
+        """Save the current cell data to a file."""
+        # Only save if buffers are in sync
+        if len(self.segBuffer.images) == len(self.analysisBuffer.DCs):
+            lineage = self.imagenet.getLineageDict()
+            ACs = self.analysisBuffer.ACs[:]
+            DCs = self.analysisBuffer.DCs[:]
+            labels = self.segBuffer.masks[:]
+            times = self.analysisBuffer.abstimes[:]
+            times = list(sorted(times))
+            times = np.asarray([t-times[0] for t in times]).astype(float)
+            
+            # Process cell data
+            tic = tm.time()
+            cell_data = process_cells(lineage, ACs, DCs, labels, times)
+            cell_keys = list(cell_data.keys())
+            cell_keys.sort()
+            cell_data = {i: cell_data[i] for i in cell_keys}
+            print(f'Calculating per cell took {round(tm.time()-tic,3)} for {len(cell_data.keys())} cells.')
+            writeCellDict(cell_data, path)
+            cv2.imwritemulti(path+'/segmentation.tif', self.segBuffer.masks)
+            cv2.imwritemulti(path+'/DCs.tif', self.segBuffer.images)
+            cv2.imwritemulti(path+'/ACs.tif', self.analysisBuffer.ACs)
+        else:
+            print('Cannot save cells, buffers are not in sync.')
+
+def writeCellDict(cell_data, path):
+    """Write cell data to a file."""
+    import csv
+    import os
+    name = "cell_data.csv"
+    fullpath = os.path.join(path, name)
+    with open(fullpath, 'w', newline='') as csvfile:
+        writer = csv.writer(csvfile)
+        for key, value in cell_data.items():
+            writer.writerow([key])
+            for k,v in value.items():
+                if 'Interior contour' not in k and  'Total contour' not in k:
+                    if isinstance(v, list):
+                        writer.writerow([k] + v)
+                    elif isinstance(v, np.ndarray):
+                        writer.writerow([k] + v.tolist())
+            writer.writerow([])  # Empty line between cells
+    print(f'Cell data saved to {fullpath}')
+    return fullpath
+

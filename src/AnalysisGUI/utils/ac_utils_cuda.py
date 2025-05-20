@@ -11,7 +11,7 @@ import os
 
 
 
-def figure_limits(series, framerate, start, end):
+def figure_limits(series, framerate, frequency, start, end):
     """Determine optimal start and end indices for analysis.
     
     Args:
@@ -45,8 +45,9 @@ def figure_limits(series, framerate, start, end):
     start = int(selectedrange[0])
     end = int(selectedrange[1])
     
-    nperiods = (end-start)/framerate
+    nperiods = (end-start)*frequency/framerate
     nperiods = np.floor(nperiods)
+    nperiods = int(nperiods)
     
     return start, end, nperiods
 
@@ -85,16 +86,16 @@ def get_AC_data(images, framerate=16.7,  tolerance=0.2,
     
     # Get optimal start and end indices
     if not hardlimits:
-        start, end, nperiods = figure_limits(series, framerate, start, end)
+        start, end, nperiods = figure_limits(series, framerate, frequency, start, end)
     else:
         nperiods = periods
     # Copy the series to GPU
     series = cp.asarray(series, dtype=np.float32)
     # Adjust end index based on number of periods
-    newlastindex = int(round(nperiods * framerate))
+    newlastindex = int(round(nperiods/frequency * framerate))
     while (newlastindex + start > end):
         nperiods -= 1
-        newlastindex = int(round(nperiods * framerate))
+        newlastindex = int(round(nperiods/frequency * framerate))
     
     end = newlastindex + start
     

@@ -46,6 +46,7 @@ class AnalysisBuffer:
             zipped = list(zip(self.abstimes, self.times, self.names, self.ACs, self.DCs,self.segBuffer.images,self.segBuffer.masks))
             zipped.sort(key=lambda x: x[0])  # assuming you want to sort by self.abstimes
             self.abstimes, self.times, self.names, self.ACs, self.DCs,self.segBuffer.images,self.segBuffer.masks = map(list, zip(*zipped))
+            
     def figureTime(self, name):
         """
         Function for figuring time from name, assuming it follows the naming convention:
@@ -65,17 +66,21 @@ class AnalysisBuffer:
         if ext.upper() == 'AM':
             hours = int(timestring[0:2])
             minutes = int(timestring[2:4])
+            seconds = int(timestring[4:6])
         elif ext.upper() == 'PM':
             if len(timestring) == 5:
                 # highly unlikely to be 10 PM or after, fix if possible
                 hours = int(timestring[0])+12
                 minutes = int(timestring[1:3])
+                seconds = int(timestring[3:5])
             else:
                 # highly unlikely to be 10 PM or after, fix if possible
                 hours = int(timestring[0:2])
                 minutes = int(timestring[2:4])
+                seconds = int(timestring[4:6])
+
         time = (hours, minutes)
-        abstime = 60*hours+minutes
+        abstime = 60*hours+minutes+seconds/60
         return time, abstime
 
     def clear(self):

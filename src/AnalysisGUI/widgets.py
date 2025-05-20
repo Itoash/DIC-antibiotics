@@ -2,6 +2,7 @@ import numpy as np
 import pyqtgraph as pg
 from pyqtgraph.Qt import QtWidgets, QtCore
 import os
+from copy import deepcopy
 
 pg.setConfigOption('imageAxisOrder', 'row-major')
 
@@ -186,7 +187,7 @@ class Signals(QtWidgets.QWidget):  # class for handling signal data and updating
         self.region.sigRegionChanged.connect(self.updateRegions)
         self.minX = 0
         self.maxX = self.time[-1]
-        self.limits = (0,len(self.time))
+        self.limits = (self.imageSource.limits[0], self.imageSource.limits[1])
         self.region.setRegion((0, self.time[-1]))
         self.region.setBounds((0, self.time[-1]))
 
@@ -215,7 +216,7 @@ class Signals(QtWidgets.QWidget):  # class for handling signal data and updating
         # set limits to those enclosed by the region; minX/maxX are updated on region move
         self.updateRegions()
         limits = (int(round(self.minX*self.imageSource.framerate))+self.imageSource.limits[0], int(round(self.maxX*self.imageSource.framerate))+self.imageSource.limits[0])
-        print(f'set new limits {limits}')
+        print(f'set new limits {self.limits}')
         self.imageSource.reanalyze(limits=self.limits,
                                   frequency=float(self.freqIn.text()),
                                   interp=self.interpButton.isChecked(),
@@ -226,7 +227,7 @@ class Signals(QtWidgets.QWidget):  # class for handling signal data and updating
         self.minX, self.maxX = self.region.getRegion()
         minindex = np.abs( self.time- self.minX).argmin()
         maxindex = np.abs( self.time- self.maxX).argmin()
-        self.limits = (minindex, maxindex+1)
+        self.limits = (minindex+self.imageSource.limits[0], maxindex+1+self.imageSource.limits[0])
     def getFFT(self):
         # small method for quickly geting fft without having to write this everytime
         self.fft = np.fft.fft(self.sig)
@@ -257,7 +258,7 @@ class Signals(QtWidgets.QWidget):  # class for handling signal data and updating
         self.region.sigRegionChanged.connect(self.updateRegions)
         self.minX = 0
         self.maxX = self.time[-1]
-        self.limits = (0,len(self.time))
+        self.limits = (self.imageSource.limits[0], self.imageSource.limits[1])
         self.region.setRegion([self.minX, self.maxX])
         self.region.setBounds((0, self.time[-1]))
         self.freqIn.setText(str(self.imageSource.frequency))
@@ -594,6 +595,7 @@ class Graph(pg.GraphItem):
     sigPanView = QtCore.Signal(object, object)
     sigNodesLinked = QtCore.Signal(object, object)
     sigNodeDisconnected = QtCore.Signal(object,object)
+    sigDeletedLineage = QtCore.Signal(object)
     sigContextMenuOpened = QtCore.Signal()
 
     def __init__(self):
@@ -617,10 +619,14 @@ class Graph(pg.GraphItem):
         self.contextUnlinkRight = QtWidgets.QAction(
             'Break right-side links')
         self.contextUnlinkRight.triggered.connect(self.disconnectNodeRight)
+        self.contextDeleteLineage = QtWidgets.QAction('Delete lineage downstream')
+        self.contextDeleteLineage.triggered.connect(self.deleteLineageDownstream)
+
         self.getInfo()
         menu.addAction(self.contextLink)
         menu.addAction(self.contextUnlinkLeft)
         menu.addAction(self.contextUnlinkRight)
+        menu.addAction(self.contextDeleteLineage)
         menu.addSeparator()
         menu.addAction('Label: '+self.info[0])
         menu.addAction('Convexity: '+self.info[2])
@@ -651,6 +657,14 @@ class Graph(pg.GraphItem):
     def disconnectNodeRight(self):
         nodepos = self.metadata[self.selectedIndices]
         self.sigNodeDisconnected.emit(nodepos,'r')
+    
+    def deleteLineageDownstream(self):
+        nodename = self.text[self.selectedIndices]
+        self.sigDeletedLineage.emit(nodename)
+        self.selectedIndices = None
+        self.updateGraph()
+        self.sigPointDeselected.emit(0)
+        print(f'Deleted lineage {nodename}')
 
     def keyPressEvent(self, ev):
         if ev.key() in [QtCore.Qt.Key_Up, QtCore.Qt.Key_Down, QtCore.Qt.Key_Left, QtCore.Qt.Key_Right] and self.selectedIndices is not None:
