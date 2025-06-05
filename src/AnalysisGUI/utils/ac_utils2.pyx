@@ -138,9 +138,8 @@ cdef interpolate_chunk(tuple chunk_data):
         ndarray[float, ndim=1] real_t = chunk_data[1]
         ndarray[float, ndim=1] synthetic_t = chunk_data[2]
     
-    # Use PchipInterpolator for cubic interpolation
-    cdef object spl = interpolate.PchipInterpolator(real_t, series_chunk, axis=0)
-    return spl(synthetic_t)
+    
+    return interpolate.pchip_interpolator(real_t,series_chunk,synthetic_t,axis = 0)
 
 
 cdef parallel_interpolate3D(ndarray[float, ndim=3] series, float framerate, int num_workers=8):
