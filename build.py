@@ -61,19 +61,19 @@ cmd.ensure_finalized()
 cmd.run()
 
 # # Copy the built extensions to the src directory structure
-# for output in cmd.get_outputs():
-#     # Extract just the filename
-#     filename = os.path.basename(output)
+for output in cmd.get_outputs():
+    # Extract just the filename
+    filename = os.path.basename(output)
     
-#     # Determine the target directory within src
-#     module_path = output.split(os.path.join('AnalysisGUI','utils'))[0]
-#     target_dir = os.path.join(base_dir, "src", "AnalysisGUI", "utils")
+    # Determine the target directory within src
+    module_path = output.split(os.path.join('AnalysisGUI','utils'))[0]
+    target_dir = os.path.join(base_dir, "src", "AnalysisGUI", "utils")
     
-#     # Create target directory if it doesn't exist
-#     os.makedirs(target_dir, exist_ok=True)
+    # Create target directory if it doesn't exist
+    os.makedirs(target_dir, exist_ok=True)
     
-#     # Copy to the target location
-#     target_path = os.path.join(target_dir, filename)
-#     print(f"Copying {output} -> {target_path}")
-#     shutil.copyfile(output, target_path)
+    # Copy to the target location
+    target_path = os.path.join(target_dir, filename)
+    print(f"Copying {output} -> {target_path}")
+    shutil.copyfile(output, target_path)
 

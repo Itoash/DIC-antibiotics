@@ -6,7 +6,7 @@ import numpy as np
 from cupyx.scipy import interpolate
 from cupyx.scipy.signal import butter, sosfiltfilt
 import os
-
+import gc
 
 
 
@@ -138,10 +138,12 @@ def get_AC_data(images, framerate=16.7,  tolerance=0.2,
     
     # Extract the AC image for this chunk
     ACarray = series_fft_abs[good_freq, :, :]
-    
+    del series_fft_abs
     # Create time array for output
     time = np.linspace(0, series.shape[0]/framerate, series.shape[0], dtype=np.float32)
     series = cp.asnumpy(series)
     ACarray = cp.asnumpy(ACarray)
     DCarray = cp.asnumpy(DCarray)
+    cp._default_memory_pool.free_all_blocks()
+    gc.collect()
     return ACarray.astype(np.float64), DCarray.astype(np.float64), (time, series), (start, end)
