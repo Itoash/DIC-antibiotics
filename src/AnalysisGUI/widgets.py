@@ -204,8 +204,8 @@ class Signals(QtWidgets.QWidget):  # class for handling signal data and updating
         limits = (0, int(len(self.imageSource.raws)))
         print(f'set new limits {limits}')
         frequency = 1.0
-        filt = True
-        interp = True
+        filt = False
+        interp = False
         self.freqIn.setText(str(frequency))
         self.interpButton.setChecked(interp)
         self.filtButton.setChecked(filt)
