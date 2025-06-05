@@ -215,16 +215,19 @@ cdef process_fft_chunk(tuple chunk_data):
         int nfft
         ndarray[float, ndim=2] ACarray_chunk
     
-    # Calculate FFT on this chunk
-    series_fft = np.fft.fft(series_chunk, axis=0)
-    nfft = series_fft.shape[0]
-    
-    # Only compute half the spectrum (positive frequencies)
-    series_fft_abs = 2*np.abs(series_fft)[0:nfft//2].astype(np.float32)
+    # Calculate RFFT on this chunk (more efficient for real-valued signals)
+    series_fft = np.fft.rfft(series_chunk, axis=0)
+    nfft = series_chunk.shape[0]  # Original signal length, not FFT length
+
+    # RFFT already gives us only positive frequencies, no need to slice
+    series_fft_abs = 2 * np.abs(series_fft).astype(np.float32)
     series_fft_abs /= nfft
-    
-    # Compute frequencies only once
-    series_frequencies = np.fft.fftfreq(nfft, 1/framerate)[0:nfft//2].astype(np.float32)
+
+    # Handle DC component (should not be doubled)
+    series_fft_abs[0] /= 2
+
+    # Compute frequencies for RFFT
+    series_frequencies = np.fft.rfftfreq(nfft, 1/framerate).astype(np.float32)
     
     # Find the frequency index closest to target - use more efficient approach
     good_freq = np.abs(series_frequencies - frequency).argmin()

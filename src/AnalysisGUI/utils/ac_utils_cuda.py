@@ -113,9 +113,9 @@ def get_AC_data(images, framerate=16.7,  tolerance=0.2,
         newN = int(round(N*currentinterval_s/desiredinterval_s))
         synthetic_t = cp.linspace(0, (newN)*desiredinterval_s, newN,dtype=np.float32)
         real_t = cp.linspace(0, N*currentinterval_s, N,dtype=np.float32)
-        spl = interpolate.PchipInterpolator(real_t,series, axis=0)
-        series = spl(synthetic_t)
-    
+        series = interpolate.pchip_interpolate(real_t,series,synthetic_t, axis=0)
+        del real_t,synthetic_t
+
     # Apply bandpass filtering if requested
     if filt:
         butterfilt = butter(4, btype='bandpass', fs=framerate, Wn=cp.array([0.1, 6], dtype=np.float32), output='sos')
@@ -123,15 +123,15 @@ def get_AC_data(images, framerate=16.7,  tolerance=0.2,
     else:
         series = series - DCarray
     # Calculate AC image
-    series_fft = cp.fft.fft(series, axis=0)
-    nfft = series_fft.shape[0]
+    series_fft_abs = cp.fft.rfft(series, axis=0)
+    nfft = series_fft_abs.shape[0]
     
     # Only compute half the spectrum (positive frequencies)
-    series_fft_abs = 2*cp.abs(series_fft)[0:nfft//2].astype(np.float32)
-    series_fft_abs /= nfft
+    series_fft_abs = 2/nfft*cp.abs(series_fft_abs).astype(np.float32)
+    
     
     # Compute frequencies only once
-    series_frequencies = cp.fft.fftfreq(nfft, 1/framerate)[0:nfft//2].astype(np.float32)
+    series_frequencies = cp.fft.rfftfreq(nfft, 1/framerate).astype(np.float32)
     
     # Find the frequency index closest to target - use more efficient approach
     good_freq = cp.abs(series_frequencies - frequency).argmin()
@@ -141,7 +141,6 @@ def get_AC_data(images, framerate=16.7,  tolerance=0.2,
     
     # Create time array for output
     time = np.linspace(0, series.shape[0]/framerate, series.shape[0], dtype=np.float32)
-    
     series = cp.asnumpy(series)
     ACarray = cp.asnumpy(ACarray)
     DCarray = cp.asnumpy(DCarray)
