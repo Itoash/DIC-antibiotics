@@ -139,7 +139,7 @@ cdef interpolate_chunk(tuple chunk_data):
         ndarray[float, ndim=1] synthetic_t = chunk_data[2]
     
     
-    return interpolate.pchip_interpolator(real_t,series_chunk,synthetic_t,axis = 0)
+    return interpolate.pchip_interpolate(real_t,series_chunk,synthetic_t,axis = 0)
 
 
 cdef parallel_interpolate3D(ndarray[float, ndim=3] series, float framerate, int num_workers=8):

@@ -1027,6 +1027,7 @@ class imagenetwork:
         self.similarity_threshold = 0.3
         self.mt_getbackoverlaps()
         self.mt_findchildren()
+        self.mt_fixmerges()
         self.makeTree()  # uncomment when sure that it makes a tree and not a graph
         self.obtainLineages()
         self.virtualizeCoords()
@@ -1039,6 +1040,8 @@ class imagenetwork:
         # - filling in oversegmented stuff - even harder, have to detect when area decreases suddenly and multiple bad overlaps appear
         # - determining network - have to have flags for: out of frame, lost contrast etc.
 
+    def mt_fixmerges(self):
+        pass
     def reassignLabels(self,oldlabels,newlabels,frame_idx):
         # relevant_nodes = [n for n in self.nodes if n.frame == frame_idx]
         # for n in relevant_nodes:

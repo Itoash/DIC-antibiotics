@@ -697,31 +697,38 @@ class Graph(pg.GraphItem):
                         self.sigPanView.emit(
                             newpos[0]-currentpos[0], newpos[1]-currentpos[1])
                 case QtCore.Qt.Key_Right:
-                    newindex = np.argwhere(
-                        self.data['adj'][:, 0] == self.selectedIndices)[0]
-                    if len(newindex) != 0:
-                        newindex = newindex[0]
-                        newindex = self.data['adj'][newindex, 1]
-                        self.selectedIndices = newindex
-                        res = self.metadata[newindex]
-                        self.updateGraph()
-                        self.sigPointSelected.emit(res[0], res[1])
-                        newpos = self.data['pos'][self.selectedIndices]
-                        self.sigPanView.emit(
-                            newpos[0]-currentpos[0], newpos[1]-currentpos[1])
+                    try:
+                        newindex = np.argwhere(
+                            self.data['adj'][:, 0] == self.selectedIndices)[0]
+                
+                        if len(newindex) != 0:
+                            newindex = newindex[0]
+                            newindex = self.data['adj'][newindex, 1]
+                            self.selectedIndices = newindex
+                            res = self.metadata[newindex]
+                            self.updateGraph()
+                            self.sigPointSelected.emit(res[0], res[1])
+                            newpos = self.data['pos'][self.selectedIndices]
+                            self.sigPanView.emit(
+                                newpos[0]-currentpos[0], newpos[1]-currentpos[1])
+                    except IndexError:
+                        pass
                 case QtCore.Qt.Key_Left:
-                    newindex = np.argwhere(
-                        self.data['adj'][:, 1] == self.selectedIndices)[0]
-                    if len(newindex) != 0:
-                        newindex = newindex[0]
-                        newindex = self.data['adj'][newindex, 0]
-                        self.selectedIndices = newindex
-                        res = self.metadata[newindex]
-                        self.updateGraph()
-                        self.sigPointSelected.emit(res[0], res[1])
-                        newpos = self.data['pos'][self.selectedIndices]
-                        self.sigPanView.emit(
-                            newpos[0]-currentpos[0], newpos[1]-currentpos[1])
+                    try:
+                        newindex = np.argwhere(
+                            self.data['adj'][:, 1] == self.selectedIndices)[0]
+                        if len(newindex) != 0:
+                            newindex = newindex[0]
+                            newindex = self.data['adj'][newindex, 0]
+                            self.selectedIndices = newindex
+                            res = self.metadata[newindex]
+                            self.updateGraph()
+                            self.sigPointSelected.emit(res[0], res[1])
+                            newpos = self.data['pos'][self.selectedIndices]
+                            self.sigPanView.emit(
+                                newpos[0]-currentpos[0], newpos[1]-currentpos[1])
+                    except IndexError:
+                        pass
 
     def contextMenuEvent(self, event):
         event.accept()

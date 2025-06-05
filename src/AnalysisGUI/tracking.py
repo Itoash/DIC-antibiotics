@@ -187,6 +187,9 @@ class TrackWindow(QtWidgets.QMainWindow):
         self.deleteImg.triggered.connect(self.deleteImage)
         self.toolbar.addAction(self.deleteImg)
         
+        self.stabilizeImages = QtWidgets.QAction("Stabilize image stack (permanent)", self)
+        self.stabilizeImages.triggered.connect(self._stabilize_images)
+        self.toolbar.addAction(self.stabilizeImages)
         # Visualization tools
         self.openTS = QtWidgets.QAction("Open Cell Time Series", self)
         self.openTS.triggered.connect(self.openTimeSeries)
