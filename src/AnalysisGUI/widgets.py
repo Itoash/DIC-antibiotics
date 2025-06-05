@@ -153,12 +153,12 @@ class Signals(QtWidgets.QWidget):  # class for handling signal data and updating
         
         self.interpButton = QtWidgets.QCheckBox("Interpolate", self)
         self.interpButton.setStatusTip("Interpolate signal")
-        self.interpButton.setChecked(True)
+        self.interpButton.setChecked(False)
         self.toolbar.addWidget(self.interpButton)
 
         self.filtButton = QtWidgets.QCheckBox("Filter", self)
         self.filtButton.setStatusTip("Filter signal")
-        self.filtButton.setChecked(True)
+        self.filtButton.setChecked(False)
         self.toolbar.addWidget(self.filtButton)
 
         # sets up plots

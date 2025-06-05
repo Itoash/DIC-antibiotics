@@ -143,7 +143,7 @@ class MainWindow(QtWidgets.QMainWindow):
         except IndexError:
             framerate = int(fps[0])
         # limits are endpoints
-        limits = (100, len(images)-1)
+        limits = (0, len(images)-1)
         images = np.asarray(images)
         _,codename = os.path.split(filename)
         print(codename)

@@ -79,8 +79,11 @@ def get_AC_data(images, framerate=16.7,  tolerance=0.2,
     Returns:
         tuple: (ACarray, DCarray, (time, series), (start, end))
     """
-    
-    
+    # Initial size check to not overflow GPU memory
+    if images.size / (1024*1024) > 4_000:
+        from AnalysisGUI.utils.ac_utils import get_AC_data as get_AC_CPU
+        return get_AC_CPU(images.astype(np.float32), framerate, tolerance,frequency,periods,start,end,interpolation,hardlimits,filt)
+
     # Copy the input array only once
     series = np.ascontiguousarray(images)
     
@@ -89,8 +92,7 @@ def get_AC_data(images, framerate=16.7,  tolerance=0.2,
         start, end, nperiods = figure_limits(series, framerate, frequency, start, end)
     else:
         nperiods = periods
-    # Copy the series to GPU
-    series = cp.asarray(series, dtype=np.float32)
+   
     # Adjust end index based on number of periods
     newlastindex = int(round(nperiods/frequency * framerate))
     while (newlastindex + start > end):
@@ -101,6 +103,9 @@ def get_AC_data(images, framerate=16.7,  tolerance=0.2,
     
     # Slice the original series to reduce memory usage
     series = series[start:end, :, :]
+    
+     # Copy the series to GPU
+    series = cp.asarray(series, dtype=np.float32)
     
     # Calculate DC array (mean over time)
     DCarray = cp.mean(series, axis=0, dtype=np.float32)

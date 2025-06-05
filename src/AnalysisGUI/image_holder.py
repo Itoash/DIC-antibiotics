@@ -14,14 +14,14 @@ class ImageHolder:
         self.parent = parent  # for calls to update dashboard
         # set limits of analysis on startup
         if limits is None:
-            limits = (100, len(raws)-1)
+            limits = (0, len(raws)-1)
         # set default/received values
         self.raws = raws
         self.framerate = framerate
         self.frequency = frequency
         self.limits = limits
-        self.interpolate = True
-        self.filter = True
+        self.interpolate = False
+        self.filter = False
         self.codename = "Startup"
         # run update upon startup to generate images
         self.update(hardlimits=True)
