@@ -52,61 +52,15 @@ def figure_limits(series, framerate, frequency, start, end):
     return start, end, nperiods
 
 
-# Optimized interpolation chunk processor
-
-
-# Optimized main function
-def get_AC_data(images, framerate=16.7,  tolerance=0.2, 
+def get_AC_chunk(series, framerate=16.7,  tolerance=0.2, 
                  frequency=1,  periods=10,  start=150,  end=399, 
                  interpolation=True,   hardlimits=False,  filt=True):
-    """
-    Extract amplitude coupling data from time series images with parallel processing.
     
-    Args:
-        images: Input 3D array with dimensions (time, height, width)
-        framerate: Sampling rate in Hz
-        tolerance: Frequency tolerance
-        frequency: Target frequency in Hz
-        periods: Number of periods to analyze
-        start: Start index
-        end: End index
-        interpolation: Whether to interpolate the time series
-        detr: Whether to detrend the time series
-        hardlimits: Whether to use hard limits for start and end
-        filt: Whether to apply bandpass filtering
-        num_workers: Number of parallel workers
-        
-    Returns:
-        tuple: (ACarray, DCarray, (time, series), (start, end))
-    """
-    # Initial size check to not overflow GPU memory
-    if images.size / (1024*1024) > 4_000:
-        from AnalysisGUI.utils.ac_utils import get_AC_data as get_AC_CPU
-        return get_AC_CPU(images.astype(np.float32), framerate, tolerance,frequency,periods,start,end,interpolation,hardlimits,filt)
-
-    # Copy the input array only once
-    series = np.ascontiguousarray(images)
     
-    # Get optimal start and end indices
-    if not hardlimits:
-        start, end, nperiods = figure_limits(series, framerate, frequency, start, end)
-    else:
-        nperiods = periods
-   
-    # Adjust end index based on number of periods
-    newlastindex = int(round(nperiods/frequency * framerate))
-    while (newlastindex + start > end):
-        nperiods -= 1
-        newlastindex = int(round(nperiods/frequency * framerate))
-    
-    end = newlastindex + start
-    
-    # Slice the original series to reduce memory usage
-    series = series[start:end, :, :]
     
      # Copy the series to GPU
     series = cp.asarray(series, dtype=np.float32)
-    
+
     # Calculate DC array (mean over time)
     DCarray = cp.mean(series, axis=0, dtype=np.float32)
     
@@ -152,3 +106,74 @@ def get_AC_data(images, framerate=16.7,  tolerance=0.2,
     cp._default_memory_pool.free_all_blocks()
     gc.collect()
     return ACarray.astype(np.float64), DCarray.astype(np.float64), (time, series), (start, end)
+
+
+# Optimized main function
+def get_AC_data(images, framerate=16.7,  tolerance=0.2, 
+                frequency=1,  periods=10,  start=150, end=399, 
+                interpolation=True, hardlimits=False, filt=True):
+
+    series = np.ascontiguousarray(images)
+
+    # Determine best temporal segment
+    if not hardlimits:
+        start, end, nperiods = figure_limits(series, framerate, frequency, start, end)
+    else:
+        nperiods = periods
+
+    newlastindex = int(round(nperiods / frequency * framerate))
+    while (newlastindex + start > end):
+        nperiods -= 1
+        newlastindex = int(round(nperiods / frequency * framerate))
+
+    end = newlastindex + start
+    series = series[start:end, :, :]  # Slice time
+
+    t, H, W = series.shape
+
+    if series.size / (1024 ** 2) < 10_000:
+        return get_AC_chunk(series, framerate=framerate, tolerance=tolerance,
+                            frequency=frequency, periods=periods, start=start, end=end,
+                            interpolation=interpolation, hardlimits=hardlimits, filt=filt)
+
+    # Estimate safe chunk size (spatial)
+    max_bytes = 2_000 * 1024 * 1024
+    bytes_per_element = 4  # float32
+    elements_per_chunk = max_bytes // (t * bytes_per_element)
+    chunk_size = int(np.sqrt(elements_per_chunk))
+
+    ACarray = np.empty((H, W), dtype=np.float64)
+    DCarray = np.empty((H, W), dtype=np.float64)
+
+    # Placeholder for series reconstruction
+    # We'll infer output time length from first chunk
+    time_out = None
+    series_out = None
+
+    for i in range(0, H, chunk_size):
+        i_end = min(i + chunk_size, H)
+        for j in range(0, W, chunk_size):
+            j_end = min(j + chunk_size, W)
+
+            chunk = series[:, i:i_end, j:j_end]
+
+            AC_chunk, DC_chunk, (time_chunk, processed_chunk), _ = get_AC_chunk(
+                chunk, framerate=framerate, tolerance=tolerance,
+                frequency=frequency, periods=periods, start=start, end=end,
+                interpolation=interpolation, hardlimits=hardlimits, filt=filt
+            )
+
+            # Store AC and DC
+            ACarray[i:i_end, j:j_end] = AC_chunk
+            DCarray[i:i_end, j:j_end] = DC_chunk
+
+            # Initialize output series container once
+            if series_out is None:
+                T_out = processed_chunk.shape[0]
+                series_out = np.empty((T_out, H, W), dtype=np.float32)
+                time_out = time_chunk  # Only need to save once
+
+            # Insert processed chunk into output array
+            series_out[:, i:i_end, j:j_end] = processed_chunk
+
+    return ACarray, DCarray, (time_out, series_out), (start, end)
