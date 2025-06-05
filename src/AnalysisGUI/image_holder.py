@@ -1,6 +1,5 @@
 import numpy as np
 import sys
-from AnalysisGUI.utils.ac_utils import get_AC_data
 import time as tm
 if sys.platform == 'darwin':
     from AnalysisGUI.utils.ac_utils import get_AC_data
