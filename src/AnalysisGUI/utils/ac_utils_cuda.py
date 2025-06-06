@@ -131,13 +131,13 @@ def get_AC_data(images, framerate=16.7,  tolerance=0.2,
 
     t, H, W = series.shape
 
-    if series.size / (1024 ** 2) < 2_000:
+    if series.size / (1024 ** 2) < 1_000:
         return get_AC_chunk(series, framerate=framerate, tolerance=tolerance,
                             frequency=frequency, periods=periods, start=start, end=end,
                             interpolation=interpolation, hardlimits=hardlimits, filt=filt)
 
     # Estimate safe chunk size (spatial)
-    max_bytes = 2_000 * 1024 * 1024
+    max_bytes = 1_000 * 1024 * 1024
     bytes_per_element = 4  # float32
     elements_per_chunk = max_bytes // (t * bytes_per_element)
     chunk_size = int(np.sqrt(elements_per_chunk))
