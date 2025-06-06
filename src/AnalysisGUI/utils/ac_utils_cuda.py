@@ -175,5 +175,6 @@ def get_AC_data(images, framerate=16.7,  tolerance=0.2,
 
             # Insert processed chunk into output array
             series_out[:, i:i_end, j:j_end] = processed_chunk
-
+            cp._default_memory_pool.free_all_blocks()
+            gc.collect()
     return ACarray, DCarray, (time_out, series_out), (start, end)

@@ -148,9 +148,11 @@ class MainWindow(QtWidgets.QMainWindow):
         _,codename = os.path.split(filename)
         print(codename)
         self.imageData.codename = codename
+        self.imageData.framerate = framerate
         self.imageData.limits = limits  # set limits
         self.imageData.setRaws(images)  # change raw image data
         self.imageData.update()  # update images internally (run AC)
+
         self.updateAnalysis()  # update Plots
 
     def segment(self):
