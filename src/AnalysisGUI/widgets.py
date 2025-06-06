@@ -10,15 +10,6 @@ pg.setConfigOption('imageAxisOrder', 'row-major')
 # function to artificially add channels to images/list of images,
 # as they are monochrome 16-bit
 
-
-def multichan(imagedata):
-    chan1 = np.copy(imagedata)
-    chan2 = np.copy(imagedata)
-    chan3 = np.copy(imagedata)
-    multi = np.stack([chan1, chan2, chan3], axis=-1)
-    return multi
-
-
 # holds the file system and a useless context menu;
 # only good part is resizes
 # CHANGE PRESET ROOT PATH AND EXPANSIONS WHEN PORTING
@@ -43,7 +34,7 @@ class DICWidget(pg.ImageView):
         super().__init__(discreteTimeLine=True, levelMode='mono')
         self.parent = parent
         self.imageSource = imagesource  # link to ImageHolder to update analysis
-        self.setImage(multichan(self.imageSource.raws), xvals=np.linspace(
+        self.setImage(self.imageSource.raws,axes={'t': 0, 'x': 2, 'y': 1, 'c': None}, xvals=np.linspace(
             0, self.imageSource.raws.shape[0]/self.imageSource.framerate, self.imageSource.raws.shape[0]))
         # hold internal ref to DICarray (idk why, you always call the imageHolder on updates to check for changes)
         self.DICarray = self.imageSource.raws
@@ -90,9 +81,8 @@ class DICWidget(pg.ImageView):
         print(f'updated Raws with limits {lims}')
         DICdata = self.imageSource.raws[lims[0]:lims[1]]
         print(f'New no of images = {len(DICdata)}')
-        DICdata = multichan(DICdata)
         # recompute t axis to hold time in seconds in absolute terms
-        self.setImage(DICdata, xvals=np.linspace(
+        self.setImage(DICdata, axes={'t': 0, 'x': 2, 'y': 1, 'c': None}, xvals=np.linspace(
             lims[0]/self.imageSource.framerate, lims[1]/self.imageSource.framerate, int(lims[1]-lims[0])))
         self.DICarray = DICdata
         print('Set in DIC')
@@ -274,8 +264,7 @@ class DCWidget(pg.ImageView):
         self.parent = parent
         self.imageSource = imagesource
         chans = self.imageSource.DC
-        default = multichan(chans)
-        self.setImage(default)
+        self.setImage(chans,axes={'t': None, 'x': 1, 'y': 0, 'c': None})
         # kern = np.array([
         #     [1]
         # ])
@@ -303,8 +292,7 @@ class DCWidget(pg.ImageView):
     def update(self):
         chans = self.imageSource.DC
         self.DCarray = chans
-        chans = multichan(chans)
-        self.setImage(chans)
+        self.setImage(chans,axes={'t': None, 'x': 1, 'y': 0, 'c': None})
         print('Set in DC')
 
     def roiChanged(self):
@@ -343,8 +331,8 @@ class ACWidget(pg.ImageView):
         self.parent = parent
         self.imageSource = imagesource
         chans = self.imageSource.AC
-        default = multichan(chans)
-        self.setImage(default)
+        
+        self.setImage(chans,axes={'t': None, 'x': 1, 'y': 0, 'c': None})
 
         self.ACarray = chans
         self.cursor_position = QtCore.QPoint(0, 0)
@@ -367,8 +355,7 @@ class ACWidget(pg.ImageView):
 
     def updateACdata(self, ACdata):
         self.ACarray = ACdata
-        ACdata = multichan(ACdata)
-        self.setImage(ACdata)
+        self.setImage(ACdata,axes={'t': None, 'x': 1, 'y': 0, 'c': None})
         print('Set in AC')
 
     def roiChanged(self):
@@ -399,8 +386,8 @@ class ACWidget(pg.ImageView):
     def update(self):
         chans = self.imageSource.AC
         self.ACarray = chans
-        chans = multichan(chans)
-        self.setImage(chans)
+        
+        self.setImage(chans,axes={'t': None, 'x': 1, 'y': 0, 'c': None})
         print('Set in AC')
 
 

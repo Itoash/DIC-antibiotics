@@ -103,8 +103,6 @@ def get_AC_chunk(series, framerate=16.7,  tolerance=0.2,
     series = cp.asnumpy(series)
     ACarray = cp.asnumpy(ACarray)
     DCarray = cp.asnumpy(DCarray)
-    cp._default_memory_pool.free_all_blocks()
-    gc.collect()
     return ACarray.astype(np.float64), DCarray.astype(np.float64), (time, series), (start, end)
 
 
@@ -131,23 +129,12 @@ def get_AC_data(images, framerate=16.7,  tolerance=0.2,
 
     t, H, W = series.shape
 
-    if series.size / (1024 ** 2) < 1_000:
+    if max(series.shape[1],series.shape[2]) < 512:
         return get_AC_chunk(series, framerate=framerate, tolerance=tolerance,
                             frequency=frequency, periods=periods, start=start, end=end,
                             interpolation=interpolation, hardlimits=hardlimits, filt=filt)
 
-    # Estimate safe chunk size (spatial)
-    max_bytes = 1_000 * 1024 * 1024
-    bytes_per_element = 4  # float32
-    elements_per_chunk = max_bytes // (t * bytes_per_element)
-    # Replace your chunk size calculation with:
-    if interpolation:
-        # For interpolation, use much smaller chunks due to memory overhead
-        chunk_size = min(256, int(np.sqrt(50_000_000 // t)))  # ~50MB base chunks
-    else:
-        # Original calculation for non-interpolation
-        elements_per_chunk = max_bytes // (t * bytes_per_element)
-        chunk_size = int(np.sqrt(elements_per_chunk))
+    chunk_size = 512
 
     ACarray = np.empty((H, W), dtype=np.float64)
     DCarray = np.empty((H, W), dtype=np.float64)
