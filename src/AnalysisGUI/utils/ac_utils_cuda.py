@@ -140,7 +140,14 @@ def get_AC_data(images, framerate=16.7,  tolerance=0.2,
     max_bytes = 1_000 * 1024 * 1024
     bytes_per_element = 4  # float32
     elements_per_chunk = max_bytes // (t * bytes_per_element)
-    chunk_size = int(np.sqrt(elements_per_chunk))
+    # Replace your chunk size calculation with:
+    if interpolation:
+        # For interpolation, use much smaller chunks due to memory overhead
+        chunk_size = min(256, int(np.sqrt(50_000_000 // t)))  # ~50MB base chunks
+    else:
+        # Original calculation for non-interpolation
+        elements_per_chunk = max_bytes // (t * bytes_per_element)
+        chunk_size = int(np.sqrt(elements_per_chunk))
 
     ACarray = np.empty((H, W), dtype=np.float64)
     DCarray = np.empty((H, W), dtype=np.float64)
@@ -175,6 +182,7 @@ def get_AC_data(images, framerate=16.7,  tolerance=0.2,
 
             # Insert processed chunk into output array
             series_out[:, i:i_end, j:j_end] = processed_chunk
+            del AC_chunk, DC_chunk, processed_chunk, chunk
             cp._default_memory_pool.free_all_blocks()
             gc.collect()
     return ACarray, DCarray, (time_out, series_out), (start, end)
