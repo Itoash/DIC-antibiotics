@@ -13,6 +13,7 @@ from AnalysisGUI.buffers import SegmentationBuffer, AnalysisBuffer
 from AnalysisGUI.segmentation import SegmentWindow
 from AnalysisGUI.tracking import TrackWindow
 from AnalysisGUI.widgets import DICWidget,DCWidget,ACWidget,Signals,FileExplorer
+import sif_parser as sp
 pg.setConfigOption('imageAxisOrder', 'row-major')
 pg.setConfigOption('background', 'k')
 
@@ -69,6 +70,57 @@ class MainWindow(QtWidgets.QMainWindow):
 
         if fileName:
             self.loadstack(fileName)
+
+    def loadspool(self, filename = None):
+         # get elected directory and run through some checks:
+        if filename is None or filename is False:
+            index = self.docks.treeview.currentIndex()
+            filename = self.docks.treeview.model.filePath(index)
+        # Check 1: if it's not a directory, display message and abort
+        print(filename)
+        if not os.path.isdir(filename):
+            QtWidgets.QApplication.restoreOverrideCursor()
+            msg = QtWidgets.QMessageBox()
+            msg.setIcon(QtWidgets.QMessageBox.Critical)
+            msg.setText("Not a directory!")
+            msg.setInformativeText(
+                'Please select a directory containing spooled data')
+            msg.setWindowTitle("TypeError")
+            msg.exec_()
+            return
+        spoolfile = [f for f in os.listdir(filename) if '.sifx' in f or '.ini' in f]
+        if len(spoolfile)<1:
+            msg = QtWidgets.QMessageBox()
+            msg.setIcon(QtWidgets.QMessageBox.Critical)
+            msg.setText("No valid files!")
+            msg.setInformativeText(
+                'Chosen directory contains no valid spooled data (.sifx and .ini headers, .dat data files)')
+            msg.setWindowTitle("TypeError")
+            msg.exec_()
+
+            return
+
+
+       
+
+        ti_c = os.path.getctime(filename)
+
+        c_ti = tm.ctime(ti_c)
+
+        
+        ctime = tm.strptime(c_ti)
+        T_stamp = tm.strftime("Spool_%Y_%m_%d_%I%M%S %p", ctime)
+        images,metadata = sp.np_spool_open(filename)
+        framerate = 1/metadata["CycleTime"]
+        limits = (0,images.shape[0])
+        self.imageData.codename = T_stamp
+        self.imageData.framerate = framerate
+        self.imageData.limits = limits  # set limits
+        self.imageData.setRaws(images)  # change raw image data
+        self.imageData.update()  # update images internally (run AC)
+
+        self.updateAnalysis()  # update Plots
+        
 
     def loadstack(self, filename=None):
         # get elected directory and run through some checks:
@@ -152,7 +204,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self.imageData.limits = limits  # set limits
         self.imageData.setRaws(images)  # change raw image data
         self.imageData.update()  # update images internally (run AC)
-
+        
         self.updateAnalysis()  # update Plots
 
     def segment(self):
@@ -305,6 +357,8 @@ class MainWindow(QtWidgets.QMainWindow):
             "&Save...", self, shortcut="Ctrl+S", triggered=self.save)
         self.loadAct = QtWidgets.QAction(
             "&Load Stack", self, shortcut="Ctrl+L", triggered=self.loadstack)
+        self.loadSpoolAct = QtWidgets.QAction(
+            "&Load Spool", self, shortcut="Ctrl+P", triggered=self.loadspool)
         self.loadDayAct = QtWidgets.QAction(
             "&Load Folder of Stacks", self, shortcut="Ctrl+A", triggered=self.loadDay)
         self.exitAct = QtWidgets.QAction(
@@ -340,6 +394,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self.fileMenu.addAction(self.openAct)
         self.fileMenu.addAction(self.saveAct)
         self.fileMenu.addAction(self.loadAct)
+        self.fileMenu.addAction(self.loadSpoolAct)
         self.fileMenu.addAction(self.loadDayAct)
         self.fileMenu.addSeparator()
         self.fileMenu.addAction(self.exitAct)

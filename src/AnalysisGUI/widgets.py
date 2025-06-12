@@ -56,7 +56,7 @@ class DICWidget(pg.ImageView):
             return
         # else display tooltip; can change tobe only on arrows to reduce bugs, but works for now
         message = f'X = {self.cursor_position.x():.1f};\nY = {self.cursor_position.y():.1f};\n' + \
-            f'Value = {self.image[ind,row,col,0]};'
+            f'Value = {self.image[ind,row,col]};'
         QtWidgets.QToolTip.showText(self.global_pos, message)
 
     def mouseMove(self, abs_pos):

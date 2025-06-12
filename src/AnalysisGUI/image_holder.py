@@ -1,10 +1,7 @@
 import numpy as np
 import sys
 import time as tm
-if sys.platform == 'darwin':
-    from AnalysisGUI.utils.ac_utils import get_AC_data
-else:
-    from AnalysisGUI.utils.ac_utils_cuda import get_AC_data
+from ac_processing import get_ac_data as get_AC_data
 
 # holder for all analysis data in current file (need to add past repr as well)
 class ImageHolder:
@@ -31,12 +28,22 @@ class ImageHolder:
 
     def update(self, hardlimits=False):
         tic = tm.time()
-        self.AC, self.DC, self.signaldata, _ = get_AC_data(self.raws.astype(np.float32).copy(),
+        raws = np.moveaxis(self.raws.astype(np.float32),0,2)
+        nperiods = self.frequency*(self.limits[1]-self.limits[0])/self.framerate
+
+        self.AC, self.DC, self.signaldata = get_AC_data(raws,
                                                            frequency=self.frequency,
                                                            framerate=self.framerate,
-                                                           start=self.limits[0],
+                                                          start=self.limits[0],
                                                            end=self.limits[1],
-                                                           hardlimits=hardlimits,interpolation=self.interpolate,filt = self.filter)
+                                                           hardlimits=hardlimits,interpolation=self.interpolate,filt = self.filter,periods =nperiods)
+        self.signaldata = (self.signaldata[0],np.moveaxis(self.signaldata[1],2,0))
+        print(f'Ac shape:{self.AC.shape}')
+        print(f'DC shape:{self.DC.shape}')
+        print(f'Sig shape:{self.signaldata[0].shape}')
+        print(f'Last time value:{self.signaldata[0][-1]}')
+        print(f'Chosen dt:{self.signaldata[0][-1]-self.signaldata[0][-2]}')
+        print(f'Time shape:{self.signaldata[1].shape}')
         toc = tm.time()-tic
         print(f"Processing took {toc:.3f} s")
 
