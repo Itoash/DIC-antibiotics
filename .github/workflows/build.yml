@@ -43,7 +43,7 @@ jobs:
       - name: Install PyQt5 on Windows
         if: runner.os == 'Windows'
         run: |
-          pip install pyqt5==5.15.10
+          poetry run pip install pyqt5
           
       # Install dependencies (different for Windows vs others)
       - name: Install dependencies (Windows)

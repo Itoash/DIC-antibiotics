@@ -7,7 +7,6 @@ import platform
 import subprocess
 from pathlib import Path
 rust_dir = Path(__file__).parent / "src" / "rust_modules" / "ac_processing"
-subprocess.run(["maturin", "build", "--release"], cwd=rust_dir, check=True)
 if os.path.exists(rust_dir):
     subprocess.run(['maturin', 'build', '--release'], cwd=rust_dir, check=True)
     subprocess.run(['maturin', 'develop', '--release'], cwd=rust_dir, check=True)
@@ -18,6 +17,7 @@ if system == "Windows":
     subprocess.check_call(["pip", "install", "cupy-cuda12x"])
 else:
     subprocess.check_call(["pip", "install", "torch", "torchvision"])
+subprocess.check_call(("pip","install","pyqt5"))
 # Use absolute paths to avoid confusion
 base_dir = os.path.dirname(os.path.abspath(__file__))
 cython_dir = os.path.join(base_dir, "src", "AnalysisGUI", "utils")
