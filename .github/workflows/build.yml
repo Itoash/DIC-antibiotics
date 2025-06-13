@@ -3,7 +3,7 @@ name: Build wheels (Windows + macOS)
 on:
   push:
     tags:
-      - 'v*'
+      - 'main'
   workflow_dispatch:
 
 jobs:
