@@ -6,7 +6,7 @@ from Cython.Build import build_ext, cythonize
 import platform
 import subprocess
 
-rust_dir = os.path.join(os.path.dirname(__file__), 'rust_modules', 'ac_processing')
+rust_dir = os.path.join(os.path.dirname(__file__), 'src','rust_modules', 'ac_processing')
 if os.path.exists(rust_dir):
     subprocess.run(['maturin', 'build', '--release'], cwd=rust_dir, check=True)
     subprocess.run(['maturin', 'develop', '--release'], cwd=rust_dir, check=True)

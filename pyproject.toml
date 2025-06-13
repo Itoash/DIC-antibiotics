@@ -7,7 +7,7 @@ authors = ["Victor Ionescu <vionescu@biodyn.ro>"]
 license = "MIT"
 readme = "README.md"
 packages = [{include = "AnalysisGUI", from = "src"}]
-
+#include = ["/rust_packages/**"]
 [tool.poetry.build]
 script = "build.py"
 generate-setup-file = false
