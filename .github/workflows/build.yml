@@ -2,8 +2,8 @@ name: Build wheels (Windows + macOS)
 
 on:
   push:
-    tags:
-      - 'main'
+    branches:
+      - main  
   workflow_dispatch:
 
 jobs:
@@ -11,7 +11,7 @@ jobs:
     strategy:
       matrix:
         os: [windows-latest, macos-latest]
-        python-version: ["3.12"]
+        python-version: ["3.12"]  
 
     runs-on: ${{ matrix.os }}
 
@@ -34,7 +34,7 @@ jobs:
 
       - name: Configure Poetry
         run: poetry config virtualenvs.in-project true
-        
+
       - name: Show Python environment
         run: |
           python --version
@@ -46,7 +46,7 @@ jobs:
 
       - name: Install maturin
         run: pip install maturin
-        
+
       - name: Build sdist and wheel
         run: poetry build
 
