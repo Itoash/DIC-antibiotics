@@ -48,7 +48,7 @@ jobs:
       # Install dependencies (different for Windows vs others)
       - name: Install dependencies (Windows)
         if: runner.os == 'Windows'
-        run: poetry install --no-root --no-dev
+        run: poetry install --no-root 
         
       - name: Install dependencies (Non-Windows)
         if: runner.os != 'Windows'
