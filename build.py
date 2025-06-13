@@ -35,7 +35,7 @@ ac_extension = Extension(
     "AnalysisGUI.utils.ac_utils",
     [ac_utils_path],
     language="c++",
-    extra_compile_args=["-O3","-ffast-math","-march=native","-mtune=native"],
+    extra_compile_args=["-O3","-ffast-math"],
     include_dirs=[np.get_include()],
     define_macros=[("NPY_NO_DEPRECATED_API", "NPY_1_7_API_VERSION")]
 )
@@ -44,7 +44,7 @@ seg_extension = Extension(
     "AnalysisGUI.utils.seg_utils",
     [seg_utils_path],
     language="c++",
-    extra_compile_args=["-O3"],
+    extra_compile_args=["-O3","-ffast-math"],
     include_dirs=[np.get_include()],
     define_macros=[("NPY_NO_DEPRECATED_API", "NPY_1_7_API_VERSION")]
 )
@@ -53,7 +53,7 @@ processor_extension = Extension(
     "AnalysisGUI.utils.cellprocessor",
     [processor_path],
     language="c++",
-    extra_compile_args=["-O3"],
+    extra_compile_args=["-O3","-ffast-math"],
     include_dirs=[np.get_include()],
     define_macros=[("NPY_NO_DEPRECATED_API", "NPY_1_7_API_VERSION")]
 )
