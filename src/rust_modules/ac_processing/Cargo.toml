@@ -1,0 +1,54 @@
+[package]
+name = "ac_processing"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+# Core ndarray (mainly for Array1 time series)
+ndarray = { version = "0.16", features = ["std", "rayon"] }
+
+
+# Parallel processing
+rayon = "1.8"
+
+# For signal processing operations
+rustfft = "6.2"  # For frequency domain operations
+realfft = "3.3"  # For real-valued FFTs
+
+# Memory mapping for large files
+memmap2 = "0.9"
+
+# Progress tracking
+indicatif = { version = "0.17", features = ["rayon"] }
+
+# For statistical operations on time series
+statrs = "0.16"
+
+# Thread detection
+num-traits = "0.2.19"
+itertools = "0.14.0"
+num-complex = "0.4.6"
+sci-rs = "0.4.1"
+ndarray-parallel = "0.9.1"
+numpy = "0.25.0"
+pyo3 = {version="0.25.0",features = ["extension-module"]}
+
+# Optional: For more advanced signal processing
+# ndarray-stats = "0.5"  # Statistical operations on arrays
+
+[dev-dependencies]
+criterion = { version = "0.5", features = ["html_reports"] }
+
+[[bench]]
+name = "array_conversion"
+harness = false
+
+[profile.release]
+opt-level = 3
+lto = true
+codegen-units = 1
+panic = "abort"
+
+
+# CPU-specific optimizations for signal processing
+# rustflags = ["-C", "target-cpu=native", "-C", "target-feature=+avx2,+fma"]
