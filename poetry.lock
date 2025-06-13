@@ -3727,22 +3727,23 @@ diagrams = ["jinja2", "railroad-diagrams"]
 
 [[package]]
 name = "pyqt5"
-version = "5.15.8"
+version = "5.15.11"
 description = "Python bindings for the Qt cross platform application toolkit"
 optional = false
-python-versions = ">=3.7"
+python-versions = ">=3.8"
 groups = ["main"]
 files = [
-    {file = "PyQt5-5.15.8-cp37-abi3-macosx_10_13_x86_64.whl", hash = "sha256:c6ee352bef5ef6392039db2d09a376908ca6ed34d1892bfe8be08e28e1992a89"},
-    {file = "PyQt5-5.15.8-cp37-abi3-manylinux_2_17_x86_64.whl", hash = "sha256:85f72addcf430b958e156fe90b975aec5c2dfe0a53f5b13c69e072de989000f7"},
-    {file = "PyQt5-5.15.8-cp37-abi3-win32.whl", hash = "sha256:7daa668d2c36b62da8fb3b68670b70455dba659fe5006400222280d6153dc035"},
-    {file = "PyQt5-5.15.8-cp37-abi3-win_amd64.whl", hash = "sha256:e812ff1f9b994f592392f764246372d29dd3e8d800087064cab47109d9aad1f7"},
-    {file = "PyQt5-5.15.8.tar.gz", hash = "sha256:bc85e3efb9135c56c8b88157c8825005fb7cd0f14babd93976778aae82eda360"},
+    {file = "PyQt5-5.15.11-cp38-abi3-macosx_11_0_arm64.whl", hash = "sha256:c8b03dd9380bb13c804f0bdb0f4956067f281785b5e12303d529f0462f9afdc2"},
+    {file = "PyQt5-5.15.11-cp38-abi3-macosx_11_0_x86_64.whl", hash = "sha256:6cd75628f6e732b1ffcfe709ab833a0716c0445d7aec8046a48d5843352becb6"},
+    {file = "PyQt5-5.15.11-cp38-abi3-manylinux_2_17_x86_64.whl", hash = "sha256:cd672a6738d1ae33ef7d9efa8e6cb0a1525ecf53ec86da80a9e1b6ec38c8d0f1"},
+    {file = "PyQt5-5.15.11-cp38-abi3-win32.whl", hash = "sha256:76be0322ceda5deecd1708a8d628e698089a1cea80d1a49d242a6d579a40babd"},
+    {file = "PyQt5-5.15.11-cp38-abi3-win_amd64.whl", hash = "sha256:bdde598a3bb95022131a5c9ea62e0a96bd6fb28932cc1619fd7ba211531b7517"},
+    {file = "PyQt5-5.15.11.tar.gz", hash = "sha256:fda45743ebb4a27b4b1a51c6d8ef455c4c1b5d610c90d2934c7802b5c1557c52"},
 ]
 
 [package.dependencies]
-PyQt5-Qt5 = ">=5.15.2"
-PyQt5-sip = ">=12.11,<13"
+PyQt5-Qt5 = ">=5.15.2,<5.16.0"
+PyQt5-sip = ">=12.15,<13"
 
 [[package]]
 name = "pyqt5-qt5"
@@ -4968,4 +4969,4 @@ type = ["pytest-mypy"]
 [metadata]
 lock-version = "2.1"
 python-versions = ">=3.10,<3.13"
-content-hash = "003d54021b8b7d0cd593d940c06ebc87e0fa7e1c65c4d78c4a4246868f65317a"
+content-hash = "c9a3c759dc7e49852e150ebae6bb8aa0e1f626c1f5e497a759c80de86c53050f"
