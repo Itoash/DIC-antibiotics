@@ -16,7 +16,7 @@ generate-setup-file = false
 [tool.poetry.dependencies]
 python = ">=3.10,<3.13"
 numpy = "~1.26"
-pyqt5 = "^5.15.11"
+pyqt5 = "^5.15"
 pyqtgraph = "^0.13.7"
 opencv-python = "^4.11.0.86"
 matplotlib = "^3.10.1"
@@ -44,6 +44,7 @@ hidden_import = ["cellpose_omni","xsdata_pydantic_basemodel.hooks"]
 [tool.poetry-pyinstaller-plugin.collect]
 # Collect all submodules, data files & binaries for 'package_A' and 'package_B'
 all = ['cellpose_omni','xsdata_pydantic_basemodel.hooks']
+
 [tool.poetry.scripts]   
 startGUI = 'AnalysisGUI.__main__:runApp'
 
