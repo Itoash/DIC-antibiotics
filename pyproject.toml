@@ -1,7 +1,7 @@
 
 [tool.poetry]
 name = "AnalysisGUI"
-version = "0.1.0"
+version = "0.1.1"
 description = "AC/DC cell analysis"
 authors = ["Victor Ionescu <vionescu@biodyn.ro>"]
 license = "MIT"
