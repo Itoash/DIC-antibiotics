@@ -32,7 +32,7 @@ venv/
 
 # IDE settings
 .vscode/
-
+*-workspace
 
 # OS-generated
 .DS_Store

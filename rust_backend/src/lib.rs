@@ -246,11 +246,11 @@ pub mod utils{
             // Easy precompute
             let fs2 = 2f32*fs;
             //Bilinear transform of zeros and poles
-            let mut z_z:Vec<Complex<f32>> = z.clone()
+            let mut z_z:Vec<Complex<f32>> = z
                                             .into_iter()
                                             .map(|s| (fs2+s)/(fs2-s))
                                             .collect();
-            let p_z:Vec<Complex<f32>> = p.clone()
+            let p_z:Vec<Complex<f32>> = p
             .into_iter()
             .map(|s| (fs2+s)/(fs2-s))
             .collect();
@@ -489,7 +489,7 @@ pub mod utils{
                         sos[si] = _single_zpksos(&z_new, &p_new, k);
                     }
                     else{
-                        sos[si] = _single_zpksos(&Vec::new(), &vec![p1], k)
+                        sos[si] = _single_zpksos(&Vec::new(), &vec![p1], k);
                     }
                 // special case one real pole and zero, not equal numer of poles/zeros, must pair with complex 0
                 } else if p_new.len()+1 == z_new.len() &&
