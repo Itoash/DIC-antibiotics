@@ -586,7 +586,6 @@ pub mod utils{
             for n in 0..sos.nrows(){
                 let a_0 = sos[[n,3]];
                 if a_0 != 0f32 && a_0 != 1f32{
-                    println!("{:?}",a_0);
                     for i in 0..6 {
                         sos[[n,i]] /= a_0;
                     }
@@ -906,7 +905,7 @@ pub mod ac{
         let w = 2f32*PI*index/final_n as f32;
         let coeff = 2f32*(w).cos();
         
-        println!("Got interpolation params");
+    
         let interp_params = if interpolate{
             let interp_params: Vec<(usize, usize, usize, usize, f32)> = (0..new_time_points)
                 .into_par_iter()
@@ -925,8 +924,8 @@ pub mod ac{
         } else{vec![(0,0,0,0,0.0);5]};
         
         let sos = butter_bandpass(4,  &cutoffs,fs);
-        let mut slices = unravel_front_axes_as_views_static(&stack);
-        println!("Got slices");
+        let slices = unravel_front_axes_as_views_static(&stack);
+        
         let mut processed_series = Array3::zeros((height,width,final_n));
         let mut ac = Array2::zeros((height,width));
         let results: Vec<(usize, usize, Array1<f32>, f32)> = slices
@@ -965,12 +964,12 @@ pub mod ac{
                     (y, x, signal, power)
                 })
                 .collect();
-        println!("Got data!");
+       
         for (y, x, signal, power) in results {
             ac[[y, x]] = power;
             processed_series.slice_mut(s![ y, x,..]).assign(&signal);
         }
-        println!("Shaped data!");
+        
                          
         Ok((processed_series,ac))
     }
@@ -981,10 +980,8 @@ pub mod ac{
     fn find_limits(stack:&ArrayView3<f32>,start:usize,end:usize,fs:f32,frequency:f32) -> Result<(usize, usize,usize), Box<dyn std::error::Error>> {
         
         let (_,_,n) = stack.dim();
-        let time = Instant::now();
         let mean_signal = find_spatial_mean(stack).expect("Getting mean went wrong");
-         let elapsed = time.elapsed();
-        println!("Time to find mean:{:?}",elapsed);
+        
         let std = mean_signal.std(0f32);
         // let time = Array1::range(0f32,n as f32*args.dt+args.dt/2f32,args.dt);
         let defaults = vec![start,end];
@@ -1003,6 +1000,7 @@ pub mod ac{
         let start = outliers[max_idx];
         let end = outliers[max_idx+1];
         let nperiods = ((end as f32-start as f32)*frequency/fs).floor() as usize;
+
         Ok((start, end, nperiods))  
 
     }
@@ -1041,6 +1039,8 @@ pub mod ac{
         // Unpack or assign start, end, nperiods
         let time = Instant::now();
         let (start, end, nperiods) = if !hardlimits {
+            let start = 0;
+            let end = raws_view.dim().2 -1;
             find_limits(&raws_view, start as usize, end as usize, framerate, frequency).unwrap()
         } else {
             (start as usize, end as usize, periods as usize)
