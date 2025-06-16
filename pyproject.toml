@@ -5,7 +5,8 @@ description = "AC/DC cell analysis"
 authors = [{ name = "Victor Ionescu", email = "vionescu@biodyn.ro" }]
 license = "MIT"
 readme = "README.md"
-requires-python = "==3.12.10"
+requires-python = ">=3.12,<3.13"
+
 
 
 dependencies = [
