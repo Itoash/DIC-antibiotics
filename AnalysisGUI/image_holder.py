@@ -29,11 +29,11 @@ class ImageHolder:
     def update(self, hardlimits=False):
         tic = tm.time()
         raws = np.moveaxis(self.raws.astype(np.float32),0,2)
-        nperiods = self.frequency*(self.limits[1]-self.limits[0])/self.framerate
+        nperiods = self.raws.shape[0]/self.framerate
         print(f'Raw image shape is:{raws.shape}')
         print(f'Limits are {self.limits}')
         print(f'Nperiods is {nperiods}')
-        self.AC, self.DC, self.signaldata = get_AC_data(raws,
+        self.AC, self.DC, self.signaldata,self.limits = get_AC_data(raws,
                                                            frequency=self.frequency,
                                                            framerate=self.framerate,
                                                           start=self.limits[0],

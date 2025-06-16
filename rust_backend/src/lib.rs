@@ -23,7 +23,7 @@ pub mod utils{
         }
         #[inline(always)]
         pub fn clamp_index(index: usize,size:usize) -> usize {
-            (index.max(0) as usize).min(size-1)
+            index.max(0).min(size-1)
         }
 
         #[inline]
@@ -68,8 +68,8 @@ pub mod utils{
                     new_signal
                 })
                 .collect::<Vec<_>>();
-            let finalres = to_array3(result,ntimes,height,width);
-            finalres
+            
+            to_array3(result,ntimes,height,width)
             
         }
         #[inline(always)]
@@ -172,7 +172,6 @@ pub mod utils{
             let z = Vec::new();
             let m :Vec<isize>= (-N+1..N).step_by(2).collect();
             let p = (0..m.len())
-                    .into_iter()
                     .map(|i| -Complex::new(0f32,m[i] as f32*PI/(2f32*N as f32)).exp())
                     .collect();
             let k = 1f32;
@@ -181,22 +180,22 @@ pub mod utils{
         /// Scale low-pass zeros/poles and gain to unit circle for low-pass
         fn lp2lp_zpk(z:&[Complex<f32>],p:&[Complex<f32>],k:f32,wo:f32)->(Vec<Complex<f32>>,Vec<Complex<f32>>,f32){
             // get relative degree
-            let degree = _relative_degree(&z, &p);
+            let degree = _relative_degree(z, p);
 
             //scale to unit circl;
-            let z_lp:Vec<Complex<f32>> = z.into_iter().map(|x| x*wo).collect();
-            let p_lp:Vec<Complex<f32>> = p.into_iter().map(|x| x*wo).collect();
-            let k_lp = k* wo.powi(degree as i32);
+            let z_lp:Vec<Complex<f32>> = z.iter().map(|x| x*wo).collect();
+            let p_lp:Vec<Complex<f32>> = p.iter().map(|x| x*wo).collect();
+            let k_lp = k* wo.powi(degree);
 
             (z_lp,p_lp,k_lp)
         } 
         /// Convert low-pass/prototype zeros/poles arrays, as well as gain, to band-pass equivalents
         fn lp2bp_zpk(z:&[Complex<f32>],p:&[Complex<f32>],k:f32,wo:f32,bw:f32)->(Vec<Complex<f32>>,Vec<Complex<f32>>,f32){
             //get relative degree
-            let degree = _relative_degree(&z, &p);
+            let degree = _relative_degree(z, p);
             //scale to bandwidth
-            let z_lp:Vec<Complex<f32>> = z.into_iter().map(|x| x*bw/2f32).collect();
-            let p_lp:Vec<Complex<f32>> = p.into_iter().map(|x| x*bw/2f32).collect();
+            let z_lp:Vec<Complex<f32>> = z.iter().map(|x| x*bw/2f32).collect();
+            let p_lp:Vec<Complex<f32>> = p.iter().map(|x| x*bw/2f32).collect();
     
             let wo_c = Complex::new(wo,0f32);
             
@@ -247,11 +246,11 @@ pub mod utils{
             let fs2 = 2f32*fs;
             //Bilinear transform of zeros and poles
             let mut z_z:Vec<Complex<f32>> = z
-                                            .into_iter()
+                                            .iter()
                                             .map(|s| (fs2+s)/(fs2-s))
                                             .collect();
             let p_z:Vec<Complex<f32>> = p
-            .into_iter()
+            .iter()
             .map(|s| (fs2+s)/(fs2-s))
             .collect();
             // Zeroes at inf get moved to cutoff
@@ -266,7 +265,7 @@ pub mod utils{
         }
         // Check if array only has complex conjugates, then return complex and real parts without complex conjugate duplicates
         fn _cplxreal( z:&[Complex<f32>])->(Vec<Complex<f32>>,Vec<Complex<f32>>){
-            if z.len() == 0{(z.to_vec(), z.to_vec())}
+            if z.is_empty(){(z.to_vec(), z.to_vec())}
             else{
                 let has_nan = z.iter().any(|x| x.re.is_nan() || x.im.is_nan());
 
@@ -283,10 +282,8 @@ pub mod utils{
                 z.sort_by(|a, b| {
                     let key_a = (a.re, a.im.abs());
                     let key_b = (b.re, b.im.abs());
-                    key_a.partial_cmp(&key_b).expect(&format!(
-        "Failed to compare values: key_a={:?}, key_b={:?}, a={:?}, b={:?}", 
-        key_a, key_b, a, b 
-    ))
+                    key_a.partial_cmp(&key_b).unwrap_or_else(|| panic!("Failed to compare values: key_a={:?}, key_b={:?}, a={:?}, b={:?}", 
+        key_a, key_b, a, b))
                 });
 
                 // Compare each element's imag part to tol * its own abs to get "real" values
@@ -337,7 +334,7 @@ pub mod utils{
                     .filter(|tup| (*tup.0 - tup.1.conj()).norm() > tol * tup.1.norm())
                     .map(|(a, b)| ((*a, *b)))
                     .collect();
-                if unmatches.len()>0{
+                if !unmatches.is_empty(){
                     panic!("Non-conjugate elements found in _cplxreal!");
                 }
                 let zc = zp.iter().zip(zn.iter()).map(|(p,n)| (p+n.conj()).unscale(2f32)).collect();
@@ -408,7 +405,7 @@ pub mod utils{
         where
             T: Num + Copy + Zero + AddAssign + Neg<Output = T>,
         {
-            if zeros.len() == 0 {
+            if zeros.is_empty() {
                 vec![T::one()]
             } else {
                 let mut res = vec![T::one()];
@@ -425,19 +422,17 @@ pub mod utils{
             let a:Vec<_> = _poly(p);
             let mut sos = vec![Complex::new(0f32,0f32);6];
             (3-b.len()..3)
-            .into_iter()
-            .zip((0..b.len()).into_iter())
+            .zip(0..b.len())
             .for_each(|(i,j)| sos[i]=b[j]);
             (6-a.len()..6)
-            .into_iter()
-            .zip((0..a.len()).into_iter())
+            .zip(0..a.len())
             .for_each(|(i,j)| sos[i]=a[j]);
             sos
         }
         // main logic for extracting sos from zeros poles and gain; hellish
         fn zpk2sos(z:&[Complex<f32>],p: &[Complex<f32>],k:f32)->Vec<Vec<Complex<f32>>>{
             // early return
-            if z.len()==p.len() && p.len() == 0{
+            if z.len()==p.len() && p.is_empty(){
                 return vec![vec![
                     Complex::new(k, 0.0),
                     Complex::new(0.0, 0.0),
@@ -466,10 +461,10 @@ pub mod utils{
             //Get complex conjugate pairs
             
             let (zc, zr) = _cplxreal(&z_new);
-            let mut z_new = zc.into_iter().chain(zr.into_iter()).collect::<Vec<_>>();
+            let mut z_new = zc.into_iter().chain(zr).collect::<Vec<_>>();
         
             let (pc,pr) = _cplxreal(&p_new);
-            let mut p_new = pc.into_iter().chain(pr.into_iter()).collect::<Vec<_>>();
+            let mut p_new = pc.into_iter().chain(pr).collect::<Vec<_>>();
 
             let mut sos = vec![vec![Complex::new(0f32,0f32);6];n_sections];
 
@@ -482,30 +477,30 @@ pub mod utils{
                 //Special case: last remaining pole
                 let sum_reals = p_new.iter().filter(|x| x.im == 0.).cloned().collect::<Vec<Complex<f32>>>().len();
                 if p1.im == 0. && sum_reals ==0{
-                    if z_new.len()>0{
+                    if !z_new.is_empty(){
                         let z1_idx = _nearest_real_complex_idx(&z_new, p1, Nearest::Real);
                         let z1 = z_new[z1_idx];
                         z_new.remove(z1_idx);
                         sos[si] = _single_zpksos(&z_new, &p_new, k);
                     }
                     else{
-                        sos[si] = _single_zpksos(&Vec::new(), &vec![p1], k);
+                        sos[si] = _single_zpksos(&Vec::new(), &[p1], k);
                     }
                 // special case one real pole and zero, not equal numer of poles/zeros, must pair with complex 0
                 } else if p_new.len()+1 == z_new.len() &&
                             p1.im != 0f32 && 
-                            p_new.is_real().iter().filter(|x| **x == true).collect::<Vec::<_>>().len() == 1 &&
-                            z_new.is_real().iter().filter(|x| **x == true).collect::<Vec::<_>>().len() == 1 {
+                            p_new.is_real().iter().filter(|x| **x).collect::<Vec::<_>>().len() == 1 &&
+                            z_new.is_real().iter().filter(|x| **x).collect::<Vec::<_>>().len() == 1 {
                         
                         let z1_idx = _nearest_real_complex_idx(&z_new, p1, Nearest::Complex);
                         let z1 = z_new[z1_idx];
                         z_new.remove(z1_idx);
-                        sos[si] = _single_zpksos(&vec![z1, z1.conj()], &vec![p1, p1.conj()], 1f32);
+                        sos[si] = _single_zpksos(&[z1, z1.conj()], &[p1, p1.conj()], 1f32);
                 } else{
                     let mut p2 = Complex::new(0f32,0f32);
                     if p1.is_real()[0]{ // real pole, get another real pole (worst one)
                         let p_reals_bool = p_new.is_real();
-                        let prealidx:Vec<usize> = (0..p_reals_bool.len()).into_iter().filter(|&i|p_reals_bool[i]).collect();
+                        let prealidx:Vec<usize> = (0..p_reals_bool.len()).filter(|&i|p_reals_bool[i]).collect();
                         let p_reals: Vec<Complex<f32>> = prealidx.iter().map(|&i| p_new[i]).collect();
                         let p2_idx = prealidx[idx_worst(&p_reals)];
                         p2 = p_new[p2_idx];
@@ -514,26 +509,24 @@ pub mod utils{
                         p2 = p1.conj();
                     }
                     // find closest zeros to selected poles
-                    if z_new.len() >0{
+                    if !z_new.is_empty(){
                         let z1_idx = _nearest_real_complex_idx(&z_new, p1, Nearest::Any);
                         let z1 = z_new[z1_idx];
                         z_new.remove(z1_idx);
                         if  !(z1.is_real()[0]){ // not real zero - use conj
-                            sos[si] = _single_zpksos(&vec![z1, z1.conj()], &vec![p1, p2], 1f32);
-                        } else {
-                            if z_new.len() > 0{
-                                let z2_idx = _nearest_real_complex_idx(&z_new, p1,Nearest::Real);
-                                let z2 = z_new[z2_idx];
-                                assert!(z2.is_real()[0]);
-                                z_new.remove(z2_idx);
-                                sos[si] = _single_zpksos(&vec![z1, z2], &vec![p1, p2], 1f32);
-                            }
-                            else{
-                                sos[si] = _single_zpksos(&vec![z1], &vec![p1, p2], 1f32);
-                            }
+                            sos[si] = _single_zpksos(&[z1, z1.conj()], &[p1, p2], 1f32);
+                        } else if !z_new.is_empty(){
+                            let z2_idx = _nearest_real_complex_idx(&z_new, p1,Nearest::Real);
+                            let z2 = z_new[z2_idx];
+                            assert!(z2.is_real()[0]);
+                            z_new.remove(z2_idx);
+                            sos[si] = _single_zpksos(&[z1, z2], &[p1, p2], 1f32);
+                        }
+                        else{
+                            sos[si] = _single_zpksos(&[z1], &[p1, p2], 1f32);
                         }
                     }else{ // no more zeros
-                        sos[si] = _single_zpksos(&vec![], &vec![p1, p2], 1f32);
+                        sos[si] = _single_zpksos(&[], &[p1, p2], 1f32);
                     }
                     }
                 }
@@ -553,7 +546,7 @@ pub mod utils{
         pub fn butter_bandpass(order:usize,cutoffs:&[f32],fs:f32)->Array2<f32>{
             // do some checks
             assert!(cutoffs[0]<cutoffs[1]);
-            assert!(cutoffs.iter().filter(|&x| *x < fs/2f32).collect::<Vec<_>>().len()>0);
+            assert!(!cutoffs.iter().filter(|&x| *x < fs/2f32).collect::<Vec<_>>().is_empty());
             // normalize cutoffs
             let Wn:Vec<f32> = cutoffs.iter().map(|&x| x/(fs/2f32)).collect();
             
@@ -601,7 +594,7 @@ pub mod utils{
     pub mod sos{
         use ndarray::{ArrayViewMut1,ArrayView2,Array2};
         use ndarray::parallel::prelude::*;
-        use rayon::prelude::*;
+        
         /// Second-Order Section coefficients [b0, b1, b2, a0, a1, a2]
         /// Note: a0 is typically 1.0 and sometimes omitted in representations
         #[derive(Debug, Clone)]
@@ -707,7 +700,7 @@ pub mod utils{
                 }
             }
         }
-        pub fn filter_inplace(mut signal: &mut ArrayViewMut1<f32>, sos: ArrayView2<f32>) {
+        pub fn filter_inplace(signal: &mut ArrayViewMut1<f32>, sos: ArrayView2<f32>) {
             let n_samples = signal.len();
             let n_sections = sos.nrows();
 
@@ -779,7 +772,7 @@ pub mod utils{
 
         
         
-        use ndarray::{Array1,Array3,s,Axis,ArrayViewMut3};
+        use ndarray::{Axis,ArrayViewMut3};
         
         use super::filters::butter_bandpass;
        // Method 2: Using ndarray's parallel axis iteration (safer)
@@ -815,7 +808,7 @@ pub mod utils{
     
     pub mod goertzel{
        
-        use ndarray::{ArrayView1,Array3,Array2,Axis,ArrayView3};
+        use ndarray::{ArrayView1,Array2,Axis,ArrayView3};
         use std::f32::consts::PI;
         use rayon::prelude::*;
         
@@ -879,7 +872,7 @@ pub mod ac{
             frame -= dc;
         });
     }
-    use crate::goertzel::{self, unravel_front_axes_as_views_static};
+    use crate::goertzel::{unravel_front_axes_as_views_static};
     use crate::utils::processing::{clamp_index,cubic_hermite_interp};
     use crate::utils::filters::butter_bandpass;
     use crate::utils::sos::filter_unrolled_4_sections;
@@ -901,7 +894,7 @@ pub mod ac{
         let fs = if interpolate{1f32/new_dt}else{1f32/old_dt};
         let final_n = if interpolate{new_time_points} else {ntimes};
         let final_dt = if interpolate {new_dt} else {old_dt};
-        let index = (frequency*final_n as f32*final_dt);
+        let index = frequency*final_n as f32*final_dt;
         let w = 2f32*PI*index/final_n as f32;
         let coeff = 2f32*(w).cos();
         
@@ -923,7 +916,7 @@ pub mod ac{
             interp_params
         } else{vec![(0,0,0,0,0.0);5]};
         
-        let sos = butter_bandpass(4,  &cutoffs,fs);
+        let sos = butter_bandpass(4,  cutoffs,fs);
         let slices = unravel_front_axes_as_views_static(&stack);
         
         let mut processed_series = Array3::zeros((height,width,final_n));
@@ -985,13 +978,13 @@ pub mod ac{
         let std = mean_signal.std(0f32);
         // let time = Array1::range(0f32,n as f32*args.dt+args.dt/2f32,args.dt);
         let defaults = vec![start,end];
-        let diff: Vec<f32> = (1..n).into_iter().map(|i| mean_signal[[i]] - mean_signal[i - 1]).collect();
+        let diff: Vec<f32> = (1..n).map(|i| mean_signal[[i]] - mean_signal[i - 1]).collect();
         let found_outliers:Vec<usize> = diff.iter().enumerate().filter_map(|(i, &x)| if x.abs() > 3f32 * std { Some(i) } else { None }).collect();
         let mut outliers = Vec::new();
         outliers.extend(defaults);
         outliers.extend(found_outliers);
         outliers.sort();
-        let outlier_diffs:Vec<usize> = (1..outliers.len()).into_iter().map(|i|outliers[i]-outliers[i-1]).collect();
+        let outlier_diffs:Vec<usize> = (1..outliers.len()).map(|i|outliers[i]-outliers[i-1]).collect();
         let max_idx = outlier_diffs
             .iter()
             .enumerate()
@@ -1005,11 +998,11 @@ pub mod ac{
 
     }
     use pyo3::prelude::*;
-    use numpy::{PyArray, PyArray2, PyArray3, PyReadonlyArray3,ToPyArray};
+    use numpy::{PyArray, PyReadonlyArray3,ToPyArray};
      // <-- Add this import for the trait
     use ndarray::{s,Dim};
 
-    use crate::{goertzel::power_at_freq, utils::{processing::interpolate_time, sos::bandpass_swapped}};
+    
 
    
     use std::time::Instant;
@@ -1031,7 +1024,8 @@ pub mod ac{
     (
         Bound<'py, PyArray<f32, Dim<[usize; 1]>>>,
         Bound<'py, PyArray<f32, Dim<[usize; 3]>>>
-    )
+    ),
+    (usize,usize),
 )> {
         // Create read-only view
         let raws_view = raws.as_array();
@@ -1041,49 +1035,54 @@ pub mod ac{
         let (start, end, nperiods) = if !hardlimits {
             let start = 0;
             let end = raws_view.dim().2 -1;
-            find_limits(&raws_view, start as usize, end as usize, framerate, frequency).unwrap()
+            find_limits(&raws_view, start as usize, end, framerate, frequency).unwrap()
         } else {
             (start as usize, end as usize, periods as usize)
         };
         let elapsed = time.elapsed();
         println!("Time to find limits:{:?}",elapsed);
         // Adjust end to match whole number of periods
-        println!("Current limits: {:?} {:?}",start,end);
+        println!("Current limits: {:?} {:?}", start, end);
+        println!("Start: {}, End: {}, NPeriods: {}", start, end, nperiods);
+        println!("Frequency: {}, Framerate: {}", frequency, framerate);
         let mut adjusted_nperiods = nperiods;
+        let (final_start,final_end) = if nperiods <1{(start,end)}else{
+        
+            // Calculate new_last_index with rounding
+            let mut new_last_index = ((adjusted_nperiods as f32 / frequency) * framerate).round() as isize;
 
-        // Calculate new_last_index with rounding
-        let mut new_last_index = ((adjusted_nperiods as f32 / frequency) * framerate).round() as isize;
+            // Cast start and end to isize for safe arithmetic
+            let start_isize = start as isize;
+            let end_isize = end as isize;
 
-        // Cast start and end to isize for safe arithmetic
-        let start_isize = start as isize;
-        let end_isize = end as isize;
+            // Safety loop: ensure new_last_index + start does not exceed end
+            while new_last_index + start_isize > end_isize && adjusted_nperiods > 0 {
+                adjusted_nperiods -= 1;
+                new_last_index = ((adjusted_nperiods as f32 / frequency) * framerate).round() as isize;
+            }
 
-        // Safety loop: ensure no underflow and indices in valid range
-        while new_last_index + start_isize > end_isize && adjusted_nperiods > 0 {
-            adjusted_nperiods -= 1;
-            new_last_index = ((adjusted_nperiods as f32 / frequency) * framerate).round() as isize;
-        }
+            // Handle case where no suitable period fits
+            if adjusted_nperiods == 0 && new_last_index + start_isize > end_isize {
+                println!("Warning: Could not find suitable period fitting within limits.");
+            }
 
-        if adjusted_nperiods == 0 && new_last_index + start_isize > end_isize {
-            // If we reach here, no valid period fits within bounds; handle gracefully
-            println!("Warning: Could not find suitable period fitting within limits.");
-            // Possibly fallback to default or exit early depending on logic
-        }
+            // Now compute final indices clamping within raws_view bounds
 
-        // Now compute final indices clamping within raws_view bounds
+            // raws_view.dim() returns (dim0, dim1, dim2) tuple, confirm dim2 is the correct time dimension
+            let max_index = (raws_view.dim().2 as isize) - 1;
 
-        // raws_view.dim() returns (dim0, dim1, dim2) tuple, confirm dim2 is the correct time dimension
-        let max_index = (raws_view.dim().2 as isize) - 1;
+            // Clamp new_last_index so final end does not exceed max_index
+            if new_last_index + start_isize > max_index {
+                new_last_index = max_index - start_isize;
+            }
+            // Clamp start (should never be negative but just in case)
+            let start_adj = if start_isize < 0 { 0 } else { start_isize } as usize;
+            let end_adj = (start_isize + new_last_index) as usize;
+            println!("{:?},{:?}",start_adj,end_adj);
+            (start_adj,end_adj)
+        };
 
-        // Clamp new_last_index so final end does not exceed max_index
-        if new_last_index + start_isize > max_index {
-            new_last_index = max_index - start_isize;
-        }
-
-        // Clamp start (should never be negative but just in case)
-        let final_start = if start_isize < 0 { 0 } else { start_isize } as usize;
-        let final_end = (start_isize + new_last_index) as usize;
-        println!("{:?},{:?}",final_start,final_end);
+        
         //Slice inputs
         let  stack = raws_view.slice(s![.., .., final_start..=final_end]);
 
@@ -1097,7 +1096,7 @@ pub mod ac{
                                             frequency, 
                                             1f32/framerate.round(),
                                             1f32/framerate,
-                                            &vec![0.1,6.0],
+                                            &[0.1,6.0],
                                             interpolation,filt)
                                             .expect("Failed to process stack");
         // Create time axis
@@ -1117,7 +1116,7 @@ pub mod ac{
          let elapsed = time.elapsed();
         println!("Time to prepare results:{:?}",elapsed);
         
-        Ok((ac_py, dc_py, (time_py,stack_py)))
+        Ok((ac_py, dc_py, (time_py,stack_py),(final_start,final_end)))
     }
 
 }
