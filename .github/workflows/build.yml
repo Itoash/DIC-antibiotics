@@ -1,0 +1,48 @@
+name: Build Wheels
+
+on:
+  push:
+    branches: [AnalysisGUI-Rust]
+  pull_request:
+
+jobs:
+  build-wheels:
+    name: Build Wheels on ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [windows-latest, macos-latest]
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install Rust (for PyO3 extension)
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          override: true
+
+      - name: Install Python dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install cibuildwheel
+
+      - name: Build wheels
+        run: |
+          cibuildwheel --output-dir dist
+
+        env:
+          CIBW_BUILD: "cp312-*"
+          CIBW_SKIP: "pp*"
+
+      - name: Upload wheels as artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: wheels-${{ matrix.os }}
+          path: dist/*.whl
