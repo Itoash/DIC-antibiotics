@@ -945,7 +945,8 @@ pub mod ac{
                             lane.to_owned()
                         };
                     signal -= signal.mean().unwrap();
-                    filter_unrolled_4_sections(&mut signal.view_mut(), sos.view());
+                    if filter{filter_unrolled_4_sections(&mut signal.view_mut(), sos.view());}
+                    
                     let n = signal.dim();
                     let power = goerzel(w, coeff, signal.view()) * 2f32 / n as f32;
                     
@@ -992,7 +993,7 @@ pub mod ac{
             .map(|(idx, _)| idx).expect("Cannot find max index");
         let start = outliers[max_idx];
         let end = outliers[max_idx+1];
-        let nperiods = ((end as f32-start as f32)*frequency/fs).floor() as usize;
+        let nperiods = ((end as f32-start as f32+1.0)*frequency/fs).floor() as usize;
 
         Ok((start, end, nperiods))  
 
@@ -1033,9 +1034,7 @@ pub mod ac{
         // Unpack or assign start, end, nperiods
         let time = Instant::now();
         let (start, end, nperiods) = if !hardlimits {
-            let start = 0;
-            let end = raws_view.dim().2 -1;
-            find_limits(&raws_view, start as usize, end, framerate, frequency).unwrap()
+            find_limits(&raws_view, start as usize, end as usize, framerate, frequency).unwrap()
         } else {
             (start as usize, end as usize, periods as usize)
         };

@@ -66,7 +66,7 @@ class DICWidget(pg.ImageView):
 
         if (0 <= row < self.DICarray.shape[1]) and (0 <= col < self.DICarray.shape[2]):
             message = f'X = {row};\nY = {col};\n' + \
-                f'Value = {self.DICarray[self.currentIndex,row,col,0]};'
+                f'Value = {self.DICarray[self.currentIndex,row,col]};'
             self.setToolTip(message)
 
         else:
@@ -220,6 +220,7 @@ class Signals(QtWidgets.QWidget):  # class for handling signal data and updating
         self.limits = (minindex+self.imageSource.limits[0], maxindex+1+self.imageSource.limits[0])
     def getFFT(self):
         # small method for quickly geting fft without having to write this everytime
+        self.dt = 1/self.imageSource.framerate
         self.fft = np.fft.fft(self.sig)
         self.freq = np.fft.fftfreq(len(self.fft), self.dt)[0:len(self.fft)//2]
         self.fft = 2*np.abs(self.fft[0:len(self.fft)//2])/len(self.fft)
@@ -236,7 +237,7 @@ class Signals(QtWidgets.QWidget):  # class for handling signal data and updating
         self.time = self.imageSource.signaldata[0]
         self.getFFT()
         self.signalPlot.getPlotItem().clear()
-        self.signalPlot.plot(np.array([self.time, self.sig]).T)
+        self.signalPlot.plot(np.array([self.time, self.sig]).T) 
         self.FFTPlot.getPlotItem().clear()
         self.FFTPlot.plot(np.array([self.freq, self.fft]).T)
 
