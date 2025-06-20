@@ -1,6 +1,6 @@
 from pyqtgraph.Qt import QtWidgets
 from AnalysisGUI.utils.seg_utils import segmentDComni
-
+import numpy as np 
 class AnalysisBuffer:
     """
     Class for long-term storage of DC and AC images, as well as metadata;
@@ -31,8 +31,8 @@ class AnalysisBuffer:
         None.
 
         """
-        self.ACs.append(AC)
-        self.DCs.append(DC)
+        self.ACs.append(AC.astype(np.float64))
+        self.DCs.append(DC.astype(np.float64))
         self.names.append(name)
         time, abstime = self.figureTime(name)
         self.times.append(time)
@@ -119,7 +119,7 @@ class SegmentationBuffer:
                 msg.setWindowTitle("TypeError")
                 return
 
-        self.images.append(img)
+        self.images.append(img.astype(np.float64))
 
         msk = segmentDComni([img])
         self.masks.append(msk[0])

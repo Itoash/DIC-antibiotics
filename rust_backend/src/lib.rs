@@ -858,7 +858,7 @@ pub mod utils{
         }
     }
 pub mod ac{
-    use ndarray::{ArrayView3,ArrayViewMut3,Axis,Array1,ArrayView2,ShapeError,Array2,Array3};
+    use ndarray::{ArrayView3,ArrayViewMut3,Axis,Array1,ArrayView2,ShapeError,Array2,Array3,Zip};
     use rayon::prelude::*;
     /// Gets mean over the first 2 axes in parallel;
     #[inline(always)]
@@ -866,18 +866,14 @@ pub mod ac{
         let result:Vec<f32> = stack.axis_iter(Axis(2)).into_par_iter().map(|frame| frame.mean().unwrap()).collect();
         Array1::from_shape_vec(result.len(), result)
     }
-    #[inline(always)]
-    fn subtract_DC(stack: &mut ArrayViewMut3<f32>, dc: &ArrayView2<f32>) {
-        stack.axis_iter_mut(Axis(2)).into_par_iter().for_each(|mut frame| {
-            frame -= dc;
-        });
-    }
-    use crate::goertzel::{unravel_front_axes_as_views_static};
     use crate::utils::processing::{clamp_index,cubic_hermite_interp};
     use crate::utils::filters::butter_bandpass;
     use crate::utils::sos::filter_unrolled_4_sections;
     use crate::goertzel::goerzel;
     use std::f32::consts::PI;
+    /// Main processing function for image time series data.
+    /// Takes in all relevant parameters and a read-only vieew of the stack,
+    /// and computes results in parallel over each pixel.
     fn process_stack(&stack:&ArrayView3<f32>,
         frequency:f32, // to extract
         old_dt:f32, //current delta_t
@@ -885,20 +881,44 @@ pub mod ac{
         cutoffs:&[f32], //bandpass cutoff frequencies (absolute)
         interpolate:bool, //interpolate?
         filter:bool//filter?
-    )->Result<(Array3<f32>,Array2<f32>),Box<dyn std::error::Error>>{
+    )->Result<(Array3<f32>,Array2<f32>,Array2<f32>),Box<dyn std::error::Error>>{
         
+        //Get current dimensions
         let (height, width, ntimes) = stack.dim();
+
+        //Compute interpolation parameters:
+        // Total real time in seconds
+        // Number of new time points to add
+        //Scale factor for figuring out where new points fall (between current indices)
+        // Final number of points based on whether we interpolate or not
+        // Final delta t based on whether we interpolate or not
         let total_time = (ntimes - 1) as f32 * old_dt;
         let new_time_points = (total_time / new_dt).floor() as usize + 1;
         let scale_factor = (ntimes - 1) as f32 / (new_time_points - 1) as f32;
-        let fs = if interpolate{1f32/new_dt}else{1f32/old_dt};
         let final_n = if interpolate{new_time_points} else {ntimes};
         let final_dt = if interpolate {new_dt} else {old_dt};
+        
+
+        //Compute Goertzel algorithm parameters:
+        // Sampling frequency
+        // Frequency of interest bin, given known dt and number of points; from fourier frequencies formula
+        // Angluar frequency (rad/s) instead of normal frequency (cycles/s)
+        // Goerztel coefficient to convolve signal with
+        let fs = 1f32/final_dt;
         let index = frequency*final_n as f32*final_dt;
         let w = 2f32*PI*index/final_n as f32;
         let coeff = 2f32*(w).cos();
         
-    
+        
+        // Compute interpolation paramas like:
+        // For each time point:
+        // Map where the time point goes after interpolation using the scale factor:
+        // (if new_dt = old_dt/2: scale factor will be 1/2 so idx 1->0.5)
+        // Get actual index into signal by truncating to integer
+        // Get parametric distance t from previous index to next
+        // Get indexes for points that interpolation requires (i-1,i,i+1,i+2)
+        // Store results in Vector (i-1,i,i+1,i+2,t)
+
         let interp_params = if interpolate{
             let interp_params: Vec<(usize, usize, usize, usize, f32)> = (0..new_time_points)
                 .into_par_iter()
@@ -916,22 +936,45 @@ pub mod ac{
             interp_params
         } else{vec![(0,0,0,0,0.0);5]};
         
+
+        // Compute second order section coefficients, fixed to order 4
         let sos = butter_bandpass(4,  cutoffs,fs);
-        let slices = unravel_front_axes_as_views_static(&stack);
         
+        // Pre-init results:
+        // processed_series holds transformed signals per pixel
+        // ac holds amplitude at desired frequency
+        // dc holds mean of signal in time per pixel
         let mut processed_series = Array3::zeros((height,width,final_n));
         let mut ac = Array2::zeros((height,width));
-        let results: Vec<(usize, usize, Array1<f32>, f32)> = slices
-                .par_iter()
-                .enumerate()
-                .map(|(idx, lane)| {
-                    let mut signal =
-                        if interpolate {
+        let mut dc = Array2::zeros((height,width));
+        let time = Instant::now();
+
+        //Zip up:
+        // -Read-only view from original stack
+        // -Mutable view from processed series
+        // -Mutable view from ac
+        // -Mutable view from dc
+        // All per pixel
+        // Because we have no colliding indices, and ndarray checks for this,
+        // the parallel iterator does not complain about mutable access to shared object
+        Zip::from(stack.lanes(Axis(2)))
+        .and(processed_series.lanes_mut(Axis(2)))
+        .and(ac.view_mut())
+        .and(dc.view_mut())
+        .par_for_each(|lane,mut result_signal,ac_point,dc_point|{
+            //Inner computing function:
+
+            // Get signal with final length:
+            let mut signal =
+                        if interpolate { //Interpolate if necessary...
                             Array1::from_elem(new_time_points, 0.0)
                                 .iter()
                                 .enumerate()
                                 .map(|(t, _)| {
+                                    // Get interpolation parameters
                                     let (idx_a, idx_b, idx_c, idx_d, interp_t) = interp_params[t];
+
+                                    //Interpolate with cubic hermite formula
                                     cubic_hermite_interp(
                                         lane[idx_a],
                                         lane[idx_b],
@@ -941,43 +984,49 @@ pub mod ac{
                                     )
                                 })
                                 .collect()
-                        } else {
+                        } else { // otherwise just get mutable copy
                             lane.to_owned()
                         };
-                    signal -= signal.mean().unwrap();
+
+                    //Compute mean in time, and subtract from signal
+                    let mean = signal.mean().unwrap();
+                    signal -= mean;
+                    
+                    //Conditionally filter signal in-place
                     if filter{filter_unrolled_4_sections(&mut signal.view_mut(), sos.view());}
                     
+                    // Compute signal amplitude at specified freuency
                     let n = signal.dim();
                     let power = goerzel(w, coeff, signal.view()) * 2f32 / n as f32;
+
+                    //Assign results
+                    *ac_point = power;
+                    *dc_point = mean;
+                    result_signal.assign(&signal);
                     
-                    // CORRECT indexing for row-major order from lanes(Axis(2))
-                    // lanes(Axis(2)) iterates as: (0,0), (0,1), ..., (0,width-1), (1,0), (1,1), ...
-                    let y = idx / width;  // row index
-                    let x = idx % width;  // column index
-                    
-                    (y, x, signal, power)
-                })
-                .collect();
-       
-        for (y, x, signal, power) in results {
-            ac[[y, x]] = power;
-            processed_series.slice_mut(s![ y, x,..]).assign(&signal);
-        }
+        });
+        let elapsed = time.elapsed();
+        println!("Time to process and assign: {:?}",elapsed);
         
-                         
-        Ok((processed_series,ac))
+        Ok((processed_series,ac,dc))
     }
     
     ///Find optimal limits in (y,x,t) dimension stack
-    /// by analysing discontinutities in signals
+    /// by analysing discontinutities in signals.
+    /// If difference between adjacent points is large (>3*STDDEV for instance),
+    /// Something unexpected happened
     #[inline]
     fn find_limits(stack:&ArrayView3<f32>,start:usize,end:usize,fs:f32,frequency:f32) -> Result<(usize, usize,usize), Box<dyn std::error::Error>> {
         
+        //Get length and spatial mean quickly
         let (_,_,n) = stack.dim();
         let mean_signal = find_spatial_mean(stack).expect("Getting mean went wrong");
         
+        //Get standard deviation and mean
         let std = mean_signal.std(0f32);
-        // let time = Array1::range(0f32,n as f32*args.dt+args.dt/2f32,args.dt);
+        // Start with specified start, end values, compute diff, and find outliers.
+        // If consecutive points are more than 3 STDDEVs apart, something is wrong
+        //Usually means signal drop
         let defaults = vec![start,end];
         let diff: Vec<f32> = (1..n).map(|i| mean_signal[[i]] - mean_signal[i - 1]).collect();
         let found_outliers:Vec<usize> = diff.iter().enumerate().filter_map(|(i, &x)| if x.abs() > 3f32 * std { Some(i) } else { None }).collect();
@@ -985,12 +1034,17 @@ pub mod ac{
         outliers.extend(defaults);
         outliers.extend(found_outliers);
         outliers.sort();
+
+        // Find max lenght region enclosed by outliers
         let outlier_diffs:Vec<usize> = (1..outliers.len()).map(|i|outliers[i]-outliers[i-1]).collect();
         let max_idx = outlier_diffs
             .iter()
             .enumerate()
             .max_by_key(|&(_, value)| value)
             .map(|(idx, _)| idx).expect("Cannot find max index");
+
+        // Assign start, end 
+        // Compute number of periods
         let start = outliers[max_idx];
         let end = outliers[max_idx+1];
         let nperiods = ((end as f32-start as f32+1.0)*frequency/fs).floor() as usize;
@@ -1000,7 +1054,6 @@ pub mod ac{
     }
     use pyo3::prelude::*;
     use numpy::{PyArray, PyReadonlyArray3,ToPyArray};
-     // <-- Add this import for the trait
     use ndarray::{s,Dim};
 
     
@@ -1008,23 +1061,25 @@ pub mod ac{
    
     use std::time::Instant;
     #[pyfunction]
+
+    /// Main interface with Python;
     pub fn get_ac_data<'py>(
         py: Python<'py>,
-        raws: PyReadonlyArray3<f32>,
-        frequency: f32,
-        framerate: f32,
-        start: f32,
-        end: f32,
-        hardlimits: bool,
-        interpolation: bool,
-        filt: bool,
-        periods: f32,
+        raws: PyReadonlyArray3<f32>, // stack data with format [height,width,time] for contiguous time signal
+        frequency: f32, // frequency of interest
+        framerate: f32, // aka sampling frequency
+        start: f32, // user-specified starting index; can be overridden if hardlimits is False
+        end: f32, // user-specified end index; can be overridden if hardlimits is False
+        hardlimits: bool, // whether to strictly respect start and end or compute own optimal values
+        interpolation: bool, // whether to interpolate the series to the nearest integer frequency
+        filt: bool, // whether to filter signal around some (currently set) values
+        periods: f32, // number of periods to include, might remove in later updates
     ) -> PyResult<(
-    Bound<'py, PyArray<f32, Dim<[usize; 2]>>>,
-    Bound<'py, PyArray<f32, Dim<[usize; 2]>>>,
+    Bound<'py, PyArray<f32, Dim<[usize; 2]>>>, //AC array containing amplitude of signal per pixel
+    Bound<'py, PyArray<f32, Dim<[usize; 2]>>>, //DC array containing mean of time series per pixel
     (
-        Bound<'py, PyArray<f32, Dim<[usize; 1]>>>,
-        Bound<'py, PyArray<f32, Dim<[usize; 3]>>>
+        Bound<'py, PyArray<f32, Dim<[usize; 1]>>>, // Computed times; may differ from initial due to interpolation
+        Bound<'py, PyArray<f32, Dim<[usize; 3]>>> // Processed time series per pixel; used to display and FFT
     ),
     (usize,usize),
 )> {
@@ -1045,6 +1100,7 @@ pub mod ac{
         println!("Start: {}, End: {}, NPeriods: {}", start, end, nperiods);
         println!("Frequency: {}, Framerate: {}", frequency, framerate);
         let mut adjusted_nperiods = nperiods;
+        // GUard against less than 1 periods
         let (final_start,final_end) = if nperiods <1{(start,end)}else{
         
             // Calculate new_last_index with rounding
@@ -1082,36 +1138,42 @@ pub mod ac{
         };
 
         
-        //Slice inputs
+        //Slice inputs based on computed limits
         let  stack = raws_view.slice(s![.., .., final_start..=final_end]);
 
-        // Compute DC component
         let time = Instant::now();
-        let dc = stack.mean_axis(Axis(2)).unwrap();
-        let elapsed = time.elapsed();
-        println!("Time to compute mean:{:?}",elapsed);
-        let framerate = if interpolation {framerate.ceil()} else {framerate};
-        let (stack,ac) = process_stack(&stack, 
+        
+
+        //Main processing function
+        let (stack,ac,dc) = process_stack(&stack, 
                                             frequency, 
-                                            1f32/framerate.round(),
                                             1f32/framerate,
-                                            &[0.1,6.0],
+                                            1f32/framerate.round(),
+                                            &[0.1,6.0], //should replace with actual user input later
                                             interpolation,filt)
                                             .expect("Failed to process stack");
-        // Create time axis
+
+        let elapsed = time.elapsed();
+        println!("Time to compute: {:?}",elapsed);
+
+        //Compute framerate
+        let framerate = if interpolation {framerate.ceil()} else {framerate};
+        
+
+        //Print info
         let num_samples = stack.dim().2;
         println!("Framerate is {:?}",framerate);
         println!("Stack size is{:?}",num_samples);
+
+        //Make time values
         let times = Array1::from_vec((0..num_samples).map(|x| x as f32 / framerate).collect());
-        println!("Made time!");
+
         // Convert results to Python/NumPy
         let time = Instant::now();
         let ac_py = ac.to_pyarray(py);
         let dc_py = dc.to_pyarray(py);
         let time_py = times.to_pyarray(py);
         let stack_py = stack.to_pyarray(py);
-        // → shape [X, Y, new_Z]         // → shape [new_Z, X, Y]                        // → ensure it's contiguous
-     
          let elapsed = time.elapsed();
         println!("Time to prepare results:{:?}",elapsed);
         

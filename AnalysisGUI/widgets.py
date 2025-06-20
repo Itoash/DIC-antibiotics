@@ -125,16 +125,16 @@ class Signals(QtWidgets.QWidget):  # class for handling signal data and updating
         # set up a toolbar for updating/resetting analysis
         self.toolbar = QtWidgets.QToolBar()
         self.updateButton = QtWidgets.QAction("Update Analysis..", self)
-        self.updateButton.setStatusTip("Redo limits and update analysis")
+        self.updateButton.setToolTip("Redo limits and update analysis")
         self.updateButton.triggered.connect(self.updateAnalysis)
         self.toolbar.addAction(self.updateButton)
         self.resetButton = QtWidgets.QAction("Reset Analysis", self)
-        self.resetButton.setStatusTip("Reset limits to 0,end")
+        self.resetButton.setToolTip("Reset limits to 0,end")
         self.resetButton.triggered.connect(self.resetAnalysis)
         self.toolbar.addAction(self.resetButton)
 
         self.freqLabel = QtWidgets.QAction("Frequency [Hz]:")
-        self.freqLabel.setStatusTip("Set frequency in Hz")
+        self.freqLabel.setToolTip("Set frequency to extract in Hz")
         self.toolbar.addAction(self.freqLabel)
         self.freqIn = QtWidgets.QLineEdit(str(1))
         self.freqIn.setMaxLength(4)
@@ -142,12 +142,12 @@ class Signals(QtWidgets.QWidget):  # class for handling signal data and updating
         self.toolbar.addWidget(self.freqIn)
         
         self.interpButton = QtWidgets.QCheckBox("Interpolate", self)
-        self.interpButton.setStatusTip("Interpolate signal")
+        self.interpButton.setToolTip("Interpolate signal to neearest integer frequency")
         self.interpButton.setChecked(False)
         self.toolbar.addWidget(self.interpButton)
 
         self.filtButton = QtWidgets.QCheckBox("Filter", self)
-        self.filtButton.setStatusTip("Filter signal")
+        self.filtButton.setToolTip("Filter signal around frequency of interest")
         self.filtButton.setChecked(False)
         self.toolbar.addWidget(self.filtButton)
 
