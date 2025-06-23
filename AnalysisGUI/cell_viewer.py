@@ -39,7 +39,7 @@ class CellViewer(QtWidgets.QMainWindow):
         self.contour_items = {'ac': [], 'dc': []}
         self.current_object = None
         self.time_change_lock = False  # Lock to prevent recursive time change calls
-        
+        self.selected_objects = []
         self.setup_ui()
         self.populate_tree()
         self.load_images()
@@ -60,6 +60,7 @@ class CellViewer(QtWidgets.QMainWindow):
         
         # Tree view for object names
         self.tree_widget = QtWidgets.QTreeWidget()
+        self.tree_widget.setSelectionMode(QtWidgets.QAbstractItemView.ExtendedSelection)
         self.tree_widget.setHeaderLabel("Objects")
         self.tree_widget.setMinimumWidth(200)
         self.tree_widget.itemClicked.connect(self.on_object_selected)
@@ -181,42 +182,35 @@ class CellViewer(QtWidgets.QMainWindow):
     
     def on_object_highlighted(self):
         """Handle object highlighting in the tree view."""
-        item = self.tree_widget.currentItem()
-        if item is None:
+        selected_items = self.tree_widget.selectedItems()
+        if not selected_items:
             return
-            
-        obj_name = item.data(0, QtCore.Qt.UserRole)
-        self.current_object = obj_name
-        
-        # Clear existing contours
+
+        # Clear old contours
         self.clear_contours()
-        
-        # Get object data
-        obj_data = self.data_dict.get(self.current_object, {})
-        if not obj_data:
-            return
-            
-        # Get the list of time values where this object appears
+
+        # Store all selected object names
+        self.selected_objects = [item.data(0, QtCore.Qt.UserRole) for item in selected_items]
+
+        # For simplicity, move to the first selected object's first appearance
+        first_object = self.selected_objects[0]
+        obj_data = self.data_dict.get(first_object, {})
         object_times = obj_data.get('times', [])
-        if not len(object_times):
-            return
-            
-        # Find the first time when the object appears
-        first_time = object_times[0]
-        
-        # Find the closest image index for this time
-        closest_idx = np.abs(self.globalTimes - first_time).argmin()
-        
-        # Snap to the first frame where the object appears
-        self.time_change_lock = True
-        self.current_time_value = first_time
-        self.current_image_index = closest_idx
-        self.ac_view.setCurrentIndex(closest_idx)
-        self.dc_view.setCurrentIndex(closest_idx)
-        self.time_change_lock = False
-        
-        # Update contours for the selected object
+
+        if object_times:
+            first_time = object_times[0]
+            closest_idx = np.abs(self.globalTimes - first_time).argmin()
+            self.time_change_lock = True
+            self.current_time_value = first_time
+            self.current_image_index = closest_idx
+            self.ac_view.setCurrentIndex(closest_idx)
+            self.dc_view.setCurrentIndex(closest_idx)
+            self.time_change_lock = False
+
+        # Update contours for all selected objects
         self.update_contours()
+
+
     def on_object_selected(self, item, column):
         """Handle object selection in the tree view."""
         obj_name = item.data(0, QtCore.Qt.UserRole)
@@ -263,52 +257,43 @@ class CellViewer(QtWidgets.QMainWindow):
             self.contour_items[view_name] = []
     
     def update_contours(self):
-        """Update contours for the current object and time."""
-        if not self.current_object:
-            return
-            
-        obj_data = self.data_dict.get(self.current_object, {})
-        if not obj_data:
-            return
-            
-        # Get the list of time values where this object appears
-        object_times = obj_data.get('times', [])
-        if not len(object_times):
+        """Update contours for selected objects at the current time."""
+        if not hasattr(self, 'selected_objects') or not self.selected_objects:
             return
         
-        # Convert to a list if it's a numpy array
-        if isinstance(object_times, np.ndarray):
-            object_times = object_times.tolist()
-            
-        # Find the closest time in the object's timeline to the current time
-        closest_time_idx = np.abs(np.array(object_times) - self.current_time_value).argmin()
-        object_time = object_times[closest_time_idx]
-        
-        # Only draw contours if we're within a reasonable tolerance of the object's time
-        # This avoids drawing contours when the object doesn't actually exist at the current time
-        time_tolerance = 0.1  # Adjust this value as needed (in minutes)
-        if abs(object_time - self.current_time_value) <= time_tolerance:
-            # Draw interior contours (green) - can be multiple contours per timepoint
-            interior_contours = obj_data.get('Interior contour', [])
-            if interior_contours and closest_time_idx < len(interior_contours):
-                current_interior_contours = interior_contours[closest_time_idx]
-                
-                # Handle both cases: single contour or list of contours
-                if isinstance(current_interior_contours, list) or isinstance(current_interior_contours, tuple):
-                    # Handle multiple contours per timepoint
-                    for contour in current_interior_contours:
-                        self.draw_contour(contour, 'green', 'ac')
-                        self.draw_contour(contour, 'green', 'dc')
-                else:
-                    # Handle single contour as numpy array
-                    self.draw_contour(current_interior_contours, 'green', 'ac')
-                    self.draw_contour(current_interior_contours, 'green', 'dc')
-            
-            # Draw total contour (red) - single contour per timepoint
-            total_contours = obj_data.get('Total contour', [])
-            if total_contours and closest_time_idx < len(total_contours):
-                self.draw_contour(total_contours[closest_time_idx], 'red', 'ac')
-                self.draw_contour(total_contours[closest_time_idx], 'red', 'dc')
+        for obj_name in self.selected_objects:
+            obj_data = self.data_dict.get(obj_name, {})
+            if not obj_data:
+                continue
+
+            object_times = obj_data.get('times', [])
+            if not len(object_times):
+                continue
+
+            if isinstance(object_times, np.ndarray):
+                object_times = object_times.tolist()
+
+            closest_time_idx = np.abs(np.array(object_times) - self.current_time_value).argmin()
+            object_time = object_times[closest_time_idx]
+
+            time_tolerance = 0.1
+            if abs(object_time - self.current_time_value) <= time_tolerance:
+                interior_contours = obj_data.get('Interior contour', [])
+                if interior_contours and closest_time_idx < len(interior_contours):
+                    current_interior_contours = interior_contours[closest_time_idx]
+                    if isinstance(current_interior_contours, (list, tuple)):
+                        for contour in current_interior_contours:
+                            self.draw_contour(contour, 'green', 'ac')
+                            self.draw_contour(contour, 'green', 'dc')
+                    else:
+                        self.draw_contour(current_interior_contours, 'green', 'ac')
+                        self.draw_contour(current_interior_contours, 'green', 'dc')
+
+                total_contours = obj_data.get('Total contour', [])
+                if total_contours and closest_time_idx < len(total_contours):
+                    self.draw_contour(total_contours[closest_time_idx], 'red', 'ac')
+                    self.draw_contour(total_contours[closest_time_idx], 'red', 'dc')
+
     
     def draw_contour(self, contour_points, color, view_type):
         """
@@ -340,68 +325,3 @@ class CellViewer(QtWidgets.QMainWindow):
         else:
             self.dc_view.getView().addItem(contour_item)
             self.contour_items['dc'].append(contour_item)
-
-
-# Example usage:
-if __name__ == "__main__":
-    import sys
-    
-    # Example data with multiple interior contours per timepoint
-    example_data = {
-        "Object1": {
-            "idx": [0, 1, 2],  # This object appears in frames 0, 1, and 2
-            "Interior contour": [
-                # Frame 0: multiple contours
-                [
-                    np.array([[10, 10], [20, 10], [20, 20], [10, 20], [10, 10]]),
-                    np.array([[30, 30], [40, 30], [40, 40], [30, 40], [30, 30]])
-                ],
-                # Frame 1: multiple contours
-                [
-                    np.array([[15, 15], [25, 15], [25, 25], [15, 25], [15, 15]]),
-                    np.array([[35, 35], [45, 35], [45, 45], [35, 45], [35, 45]])
-                ],
-                # Frame 2: multiple contours
-                [
-                    np.array([[20, 20], [30, 20], [30, 30], [20, 30], [20, 20]]),
-                    np.array([[40, 40], [50, 40], [50, 50], [40, 50], [40, 40]])
-                ]
-            ],
-            "Total contour": [
-                np.array([[5, 5], [45, 5], [45, 45], [5, 45], [5, 5]]),        # for frame 0
-                np.array([[10, 10], [50, 10], [50, 50], [10, 50], [10, 10]]),  # for frame 1
-                np.array([[15, 15], [55, 15], [55, 55], [15, 55], [15, 15]])   # for frame 2
-            ]
-        },
-        "Object2": {
-            "idx": [3, 4, 5],  # This object appears in frames 3, 4, and 5
-            "Interior contour": [
-                # Frame 3: multiple contours
-                [
-                    np.array([[50, 50], [60, 50], [60, 60], [50, 60], [50, 50]]),
-                    np.array([[70, 70], [80, 70], [80, 80], [70, 80], [70, 70]])
-                ],
-                # Frame 4: single contour
-                np.array([[55, 55], [75, 55], [75, 75], [55, 75], [55, 55]]),
-                # Frame 5: multiple contours
-                [
-                    np.array([[60, 60], [70, 60], [70, 70], [60, 70], [60, 60]]),
-                    np.array([[80, 80], [90, 80], [90, 90], [80, 90], [80, 80]])
-                ]
-            ],
-            "Total contour": [
-                np.array([[40, 40], [90, 40], [90, 90], [40, 90], [40, 40]]),  # for frame 3
-                np.array([[45, 45], [85, 45], [85, 85], [45, 85], [45, 45]]),  # for frame 4
-                np.array([[50, 50], [95, 50], [95, 95], [50, 95], [50, 95]])   # for frame 5
-            ]
-        }
-    }
-    
-    # Create example image data (6 frames)
-    ac_images = [np.random.rand(100, 100) for _ in range(6)]
-    dc_images = [np.random.rand(100, 100) for _ in range(6)]
-    
-    app = QtWidgets.QApplication(sys.argv)
-    window = CellViewer(example_data, ac_images, dc_images)
-    window.show()
-    sys.exit(app.exec_())

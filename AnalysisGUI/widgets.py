@@ -1,6 +1,6 @@
 import numpy as np
 import pyqtgraph as pg
-from pyqtgraph.Qt import QtWidgets, QtCore
+from pyqtgraph.Qt import QtWidgets, QtCore,QtGui
 import os
 from copy import deepcopy
 
@@ -137,6 +137,7 @@ class Signals(QtWidgets.QWidget):  # class for handling signal data and updating
         self.freqLabel.setToolTip("Set frequency to extract in Hz")
         self.toolbar.addAction(self.freqLabel)
         self.freqIn = QtWidgets.QLineEdit(str(1))
+        self.freqIn.setValidator(QtGui.QDoubleValidator(0.0, 1e6, 3))  # min, max, decimals
         self.freqIn.setMaxLength(4)
         self.freqIn.setMaximumWidth(50)
         self.toolbar.addWidget(self.freqIn)
@@ -150,6 +151,25 @@ class Signals(QtWidgets.QWidget):  # class for handling signal data and updating
         self.filtButton.setToolTip("Filter signal around frequency of interest")
         self.filtButton.setChecked(False)
         self.toolbar.addWidget(self.filtButton)
+
+
+        self.filt_min = QtWidgets.QAction("Min filtering frequency [Hz]")
+        self.toolbar.addAction(self.filt_min)
+        self.minF =  QtWidgets.QLineEdit(str(0.1))
+        self.minF.setValidator(QtGui.QDoubleValidator(0.0, 1e6, 3))
+        self.minF.setMaxLength(4)
+        self.minF.setMaximumWidth(50)
+        self.toolbar.addWidget(self.minF)
+
+        self.filt_max = QtWidgets.QAction("Max filtering frequency [Hz]")
+        self.toolbar.addAction(self.filt_max)
+        self.maxF =  QtWidgets.QLineEdit(str(6))
+        self.maxF.setValidator(QtGui.QDoubleValidator(0.0, 1e6, 3))
+        self.maxF.setMaxLength(4)
+        self.maxF.setMaximumWidth(50)
+        self.toolbar.addWidget(self.maxF)
+
+
 
         # sets up plots
         self.signalPlot = pg.PlotWidget(title='Averaged signal', labels={
@@ -199,8 +219,9 @@ class Signals(QtWidgets.QWidget):  # class for handling signal data and updating
         self.freqIn.setText(str(frequency))
         self.interpButton.setChecked(interp)
         self.filtButton.setChecked(filt)
-
-        self.imageSource.reanalyze(limits=limits,filt = filt,interp = interp, frequency=frequency,hardlimits = False)
+        self.minF.setText(str(0.1))
+        self.maxF.setText(str(6))
+        self.imageSource.reanalyze(limits=limits,filt = filt,interp = interp, frequency=frequency,hardlimits = False,filt_freqs = (0.1,6))
     
     def updateAnalysis(self):
         # set limits to those enclosed by the region; minX/maxX are updated on region move
@@ -210,7 +231,7 @@ class Signals(QtWidgets.QWidget):  # class for handling signal data and updating
         self.imageSource.reanalyze(limits=self.limits,
                                   frequency=float(self.freqIn.text()),
                                   interp=self.interpButton.isChecked(),
-                                  filt=self.filtButton.isChecked())
+                                  filt=self.filtButton.isChecked(),filt_freqs = self.freq_limits)
 
     def updateRegions(self):
         # here we update region limits in case we want to redo analysis
@@ -218,6 +239,14 @@ class Signals(QtWidgets.QWidget):  # class for handling signal data and updating
         minindex = np.abs( self.time- self.minX).argmin()
         maxindex = np.abs( self.time- self.maxX).argmin()
         self.limits = (minindex+self.imageSource.limits[0], maxindex+1+self.imageSource.limits[0])
+        try:
+            min_freq = float(self.minF.text())
+            max_freq = float(self.maxF.text())
+        except ValueError:
+            min_freq = 0.1
+            max_freq = 6
+        self.freq_limits = (max(min_freq,0.0),min(max_freq,self.freq[-1]))
+
     def getFFT(self):
         # small method for quickly geting fft without having to write this everytime
         self.dt = 1/self.imageSource.framerate
@@ -596,7 +625,8 @@ class Graph(pg.GraphItem):
         self.scatter.sigHovered.connect(self.on_scatter_hover)
         self.linking = False
         self.menu = None
-
+        
+        
     def getMenu(self):
         menu = QtWidgets.QMenu()
         self.contextLink = QtWidgets.QAction('Link with next selected node')

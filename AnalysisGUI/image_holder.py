@@ -17,15 +17,15 @@ class ImageHolder:
         self.framerate = framerate
         self.frequency = frequency
         self.limits = limits
+        self.filt_freqs = (0.1,6)
         self.interpolate = False
         self.filter = False
         self.codename = "Startup"
         # run update upon startup to generate images
         self.update(hardlimits=True)
-
+    
     def setRaws(self, raws):
         self.raws = raws  # update raws
-
     def update(self, hardlimits=False):
         tic = tm.time()
         raws = np.moveaxis(self.raws.astype(np.float32),0,2)
@@ -38,7 +38,7 @@ class ImageHolder:
                                                            framerate=self.framerate,
                                                           start=self.limits[0],
                                                            end=self.limits[1],
-                                                           hardlimits=hardlimits,interpolation=self.interpolate,filt = self.filter,periods =nperiods)
+                                                           hardlimits=hardlimits,interpolation=self.interpolate,filt = self.filter,periods =nperiods,filter_limits = self.filt_freqs)
         self.signaldata = (self.signaldata[0],np.moveaxis(self.signaldata[1],2,0))
         print(f'Ac shape:{self.AC.shape}')
         print(f'DC shape:{self.DC.shape}')
@@ -50,7 +50,7 @@ class ImageHolder:
         print(f"Processing took {toc:.3f} s")
 
     def reanalyze(self,frequency = None,
-                  limits = None, interp = None,filt = None,hardlimits = False):
+                  limits = None, interp = None,filt = None,hardlimits = False,filt_freqs = None):
         # reanalyze with new parameters
         if limits is not None:
             self.limits = limits
@@ -60,6 +60,8 @@ class ImageHolder:
             self.interpolate = interp
         if filt is not None:  
             self.filter = filt
+        if filt_freqs is not None:
+            self.filt_freqs = filt_freqs
         print(f'new frequency {self.frequency}')
         print(f'new limits {self.limits}')
         print(f'new interpolation {self.interpolate}')

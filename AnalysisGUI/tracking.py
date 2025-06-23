@@ -109,6 +109,7 @@ class TrackWindow(QtWidgets.QMainWindow):
         self.GraphPlot = pg.PlotWidget()
         self.Graph = Graph()
         self.GraphPlot.addItem(self.Graph)
+        self.GraphPlot.getPlotItem().setMenuEnabled(False)
         
         # Add widgets to splitter
         splitter.addWidget(self.DCplot)

@@ -221,7 +221,7 @@ cdef list process_label(np.ndarray AC, np.ndarray DC, np.ndarray label, float co
 
     # Create binary mask for contour detection
     filtered[mask] = 1
-    coords = np.argwhere(mask)
+    coords = np.argwhere(filtered)
 
     if len(coords) > 0:
         # Calculate center of mass and area

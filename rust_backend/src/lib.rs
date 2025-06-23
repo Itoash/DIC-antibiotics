@@ -640,7 +640,7 @@ pub mod utils{
             }
             
             /// Get current filter state (useful for debugging or state inspection)
-            pub fn state(&self) -> ArrayView2<f32> {
+            pub fn state(&self) -> ArrayView2<'_,f32> {
                 self.zi.view()
             }
             
@@ -880,7 +880,7 @@ pub mod ac{
         new_dt:f32, //target delta_t
         cutoffs:&[f32], //bandpass cutoff frequencies (absolute)
         interpolate:bool, //interpolate?
-        filter:bool//filter?
+        filter:bool,//filter?
     )->Result<(Array3<f32>,Array2<f32>,Array2<f32>),Box<dyn std::error::Error>>{
         
         //Get current dimensions
@@ -1073,7 +1073,8 @@ pub mod ac{
         hardlimits: bool, // whether to strictly respect start and end or compute own optimal values
         interpolation: bool, // whether to interpolate the series to the nearest integer frequency
         filt: bool, // whether to filter signal around some (currently set) values
-        periods: f32, // number of periods to include, might remove in later updates
+        periods: f32,
+        filter_limits:(f32,f32) // number of periods to include, might remove in later updates
     ) -> PyResult<(
     Bound<'py, PyArray<f32, Dim<[usize; 2]>>>, //AC array containing amplitude of signal per pixel
     Bound<'py, PyArray<f32, Dim<[usize; 2]>>>, //DC array containing mean of time series per pixel
@@ -1149,7 +1150,7 @@ pub mod ac{
                                             frequency, 
                                             1f32/framerate,
                                             1f32/framerate.round(),
-                                            &[0.1,6.0], //should replace with actual user input later
+                                            &[filter_limits.0,filter_limits.1], //should replace with actual user input later
                                             interpolation,filt)
                                             .expect("Failed to process stack");
 

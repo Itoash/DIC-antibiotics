@@ -12,6 +12,7 @@ class DataVisualizerApp(QMainWindow):
         super().__init__(parent=parent)
         self.data_dict = data_dict
         self.show_all_objects = False
+        self.show_lineage = False
         self.init_ui()
         
     def init_ui(self):
@@ -45,6 +46,10 @@ class DataVisualizerApp(QMainWindow):
         self.multi_obj_checkbox.stateChanged.connect(self.toggle_multi_object_view)
         left_layout.addWidget(self.multi_obj_checkbox)
         
+        # Add lineage selection checkbox
+        self.lineage_checkbox = QCheckBox("Show selected parameter for all objects in current lineage")
+        self.lineage_checkbox.stateChanged.connect(self.toggle_lineage_view)
+        left_layout.addWidget(self.lineage_checkbox)
         # Add range control buttons
         range_box = QGroupBox("Range Controls")
         range_layout = QVBoxLayout(range_box)
@@ -116,7 +121,9 @@ class DataVisualizerApp(QMainWindow):
         """Toggle between normal view and multi-object parameter view"""
         self.show_all_objects = self.multi_obj_checkbox.isChecked()
         self.update_plot()
-    
+    def toggle_lineage_view(self):
+        self.show_lineage = self.lineage_checkbox.isChecked()
+        self.update_plot()
     def update_plot(self):
         """Update the plot based on selected items"""
         self.plot.clear()
@@ -147,7 +154,7 @@ class DataVisualizerApp(QMainWindow):
         min_time = float('inf')
         max_time = float('-inf')
         
-        if self.show_all_objects:
+        if self.show_all_objects or self.show_lineage:
             # Get selected parameters (attributes)
             selected_params = []
             for item in selected_items:
@@ -156,9 +163,23 @@ class DataVisualizerApp(QMainWindow):
                     if param_name not in selected_params:
                         selected_params.append(param_name)
             
+            if self.show_lineage:
+                selected_cells = []
+                for item in selected_items:
+                    if item.parent():  # This is an attribute, use parent name
+                        param_name = item.parent().text(0)
+                        if param_name not in selected_params:
+                            selected_cells.append(param_name)
+                    else:
+                        param_name = item.text(0) # this is a cell, use its name
+                        if param_name not in selected_params:
+                            selected_cells.append(param_name)
+                objects = [item for item in self.data_dict.items() if any(sub in item[0] for sub in selected_cells)]
+            else:
+                objects = self.data_dict.items()
             # For each selected parameter, plot it for all objects that have it
             for param_name in selected_params:
-                for obj_name, obj_data in self.data_dict.items():
+                for obj_name, obj_data in objects:
                     if param_name in obj_data:
                         # Get time values (x-axis)
                         time_values = self.data_dict[obj_name].get('times', list(range(len(self.data_dict[obj_name][param_name]))))
@@ -182,6 +203,9 @@ class DataVisualizerApp(QMainWindow):
                         self.overview_items.append(overview_item)
                         
                         color_idx += 1
+
+
+
         else:
             # Original behavior - plot only selected items
             for item in selected_items:
