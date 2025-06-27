@@ -1,0 +1,34 @@
+[package]
+name = "ac_processor"
+version = "0.1.1"
+edition = "2021"
+
+[lib]
+name = "_ac_processor"
+crate-type=["cdylib"]
+path = "rust_backend/src/lib.rs"
+
+[dependencies]
+# Core ndarray (mainly for Array1 time series)
+ndarray = { version = "0.16", features = ["std", "rayon"] }
+
+
+# Parallel processing
+rayon = "1.8"
+
+
+# Thread detection
+num-traits = "0.2.19"
+num-complex = "0.4.6"
+numpy = "0.25.0"
+pyo3 = {version="0.25.0",features = ["extension-module"]}
+
+[package.metadata.maturin]
+name = "ac_processing"
+
+[profile.release]
+opt-level = 3
+lto = true
+codegen-units = 1
+panic = "abort"
+

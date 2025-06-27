@@ -1,11 +1,49 @@
-.DS_Store
-Test Images
-__pycache__
-Old Scripts
-Test Images
-Misc. files
-build
-*.so
-*cpp
-cellprocesor_backup.pyx
+# Byte-compiled / cache files
+__pycache__/
+*.py[cod]
+*$py.class
 
+# Cython-generated C/C++ files
+*.c
+*.cpp
+*.so
+*.pyd
+
+# Build artifacts
+build/
+dist/
+*.egg-info/
+*.eggs/
+*.manifest
+*.spec
+pip-wheel-metadata/
+.wheelhouse/
+
+# Rust build artifacts
+target/
+Cargo.lock
+
+# Installer logs
+*.log
+
+# Virtual environments
+venv/
+.venv/
+
+# IDE settings
+.vscode/
+*-workspace
+
+# OS-generated
+.DS_Store
+Thumbs.db
+
+# PyInstaller
+*.exe
+*.dll
+
+
+
+# Cibuildwheel output
+*.whl
+wheels/

@@ -1,61 +1,55 @@
-
-[tool.poetry]
+[project]
 name = "AnalysisGUI"
 version = "0.1.1"
 description = "AC/DC cell analysis"
-authors = ["Victor Ionescu <vionescu@biodyn.ro>"]
+authors = [{ name = "Victor Ionescu", email = "vionescu@biodyn.ro" }]
 license = "MIT"
 readme = "README.md"
-packages = [{include = "AnalysisGUI", from = "src"}]
-#include = ["/rust_packages/**"]
-[tool.poetry.build]
-script = "build.py"
-generate-setup-file = false
+requires-python = ">=3.12,<3.13"
 
 
-[tool.poetry.dependencies]
-python = ">=3.10,<3.13"
-numpy = "~1.26"
-pyqtgraph = "^0.13.7"
-opencv-python = "^4.11.0.86"
-matplotlib = "^3.10.1"
-cython = ">=3.0.12"
-natsort = "^8.4.0"
-aicsimageio = "^4.14.0"
-omnipose = { git = "https://github.com/kevinjohncutler/omnipose.git", rev = "18ece331bc4d468a670b2c6df8eb1e70bd0f1120" }
-scipy = "~1.11"
-loky = "^3.5.1"
-dill = "^0.3.9"
-networkit = "<11.1.post1"
-sif-parser = "^0.3.5"
-maturin = "^1.8.7"
 
-[tool.poetry-pyinstaller-plugin]
-# Disable [tool.poetry.include] and use plugin settings instead
-exclude-include = true
+dependencies = [
+    "numpy ~=1.26",
+    "pyqtgraph >=0.13.7,<0.14",
+    "PyQt5 >= 5.15",
+    "opencv-python >=4.11.0.86,<5.0.0",
+    "matplotlib >=3.10.1,<3.11",
+    "cython >=3.0.12",
+    "natsort ~=8.4.0",
+    "aicsimageio ~=4.14.0",
+    "omnipose @ git+https://github.com/kevinjohncutler/omnipose.git@18ece331bc4d468a670b2c6df8eb1e70bd0f1120",
+    "scipy ~=1.11",
+    "loky ~=3.5.1",
+    "dill ~=0.3.9",
+    "networkit <11.1.post1",
+    "sif-parser ~=0.3.5"
+]
 
-[tool.poetry-pyinstaller-plugin.scripts]
-startGUI = 'src/AnalysisGUI/__main__.py'
-use-poetry-install = true
-windowed = true
-hidden_import = ["cellpose_omni","xsdata_pydantic_basemodel.hooks"]
+[project.scripts]
+startGUI = "AnalysisGUI.__main__:runApp"
 
-[tool.poetry-pyinstaller-plugin.collect]
-# Collect all submodules, data files & binaries for 'package_A' and 'package_B'
-all = ['cellpose_omni','xsdata_pydantic_basemodel.hooks']
-
-[tool.poetry.scripts]   
-startGUI = 'AnalysisGUI.__main__:runApp'
-
-[[tool.poetry.source]]
-name = "pytorch"
-url = "https://download.pytorch.org/whl/cu126"
-priority = "explicit"
-
-
-[tool.poetry.group.dev.dependencies]
-pyinstaller = "^6.13.0"
+[project.optional-dependencies]
+dev = [
+    "pyinstaller ~=6.13.0"
+]
 
 [build-system]
-requires = ["poetry-core","Cython","setuptools","numpy","pip","maturin"]
-build-backend = "poetry.core.masonry.api"
+requires = [
+    "setuptools>=61",
+    "wheel",
+    "cython",
+    "numpy",
+    "setuptools-rust>=1.5.2"
+]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages]
+# Pure Python packages/modules
+find = { where = ["."] }
+
+[[tool.setuptools-rust.ext-modules]]
+# Private Rust extension module to be nested into the Python package
+target = "AnalysisGUI.utils._ac_processor"  # The last part of the name (e.g. "_lib") has to match lib.name in Cargo.toml,
+                             # but you can add a prefix to nest it inside of a Python package.    # Default value, can be omitted
+binding = "PyO3"      
