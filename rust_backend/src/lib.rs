@@ -874,7 +874,7 @@ pub mod ac{
     /// Main processing function for image time series data.
     /// Takes in all relevant parameters and a read-only vieew of the stack,
     /// and computes results in parallel over each pixel.
-    fn process_stack(&stack:&ArrayView3<f32>,
+    pub fn process_stack(&stack:&ArrayView3<f32>,
         frequency:f32, // to extract
         old_dt:f32, //current delta_t
         new_dt:f32, //target delta_t
@@ -948,7 +948,7 @@ pub mod ac{
         let mut ac = Array2::zeros((height,width));
         let mut dc = Array2::zeros((height,width));
         let time = Instant::now();
-
+        println!("Computed parameters");
         //Zip up:
         // -Read-only view from original stack
         // -Mutable view from processed series
@@ -1102,7 +1102,7 @@ pub mod ac{
         println!("Frequency: {}, Framerate: {}", frequency, framerate);
         let mut adjusted_nperiods = nperiods;
         // GUard against less than 1 periods
-        let (final_start,final_end) = if nperiods <1{(start,end)}else{
+        let (final_start,final_end) = if nperiods <1{(start,end.max(raws_view.dim().2-1))}else{
         
             // Calculate new_last_index with rounding
             let mut new_last_index = ((adjusted_nperiods as f32 / frequency) * framerate).round() as isize;
@@ -1137,8 +1137,24 @@ pub mod ac{
             println!("{:?},{:?}",start_adj,end_adj);
             (start_adj,end_adj)
         };
+        let mut final_start = final_start;
+        let mut final_end = final_end;
 
-        
+        println!("Final limits: {:?} {:?}", final_start, final_end);
+        if final_end >= raws_view.dim().2 {
+            println!("Warning: final_end exceeds stack length, clamping to max index.");
+            println!("Stack length: {}, final_end: {}", raws_view.dim().2, final_end);
+            println!("Clamping final_end to: {}", raws_view.dim().2 - 1);
+            // Clamp final_end to max index
+            final_end = raws_view.dim().2 - 1;
+        }
+        // Check if final_start is less than final_end
+        if final_start >= final_end {
+            println!("Error: final_start must be less than final_end.");
+            final_start = 0;
+            final_end = raws_view.dim().2 - 1;
+        }
+        println!("Final limits after adjustment: {:?} {:?}", final_start, final_end);
         //Slice inputs based on computed limits
         let  stack = raws_view.slice(s![.., .., final_start..=final_end]);
 
@@ -1192,5 +1208,23 @@ fn _ac_processor(_py: Python, m: &Bound<'_, PyModule>) -> PyResult<()> {
 }
 #[cfg(test)]
 mod tests {
-
+    #[test]
+    fn test_process_stack() {
+        use ndarray::Array3;
+        use crate::ac::process_stack;
+        let stack = Array3::<f32>::zeros((2048, 2048, 400));
+        let frequency = 0.1;
+        let framerate = 100.0;
+        let start = 0;
+        let end = 399;
+        let hardlimits = false;
+        let interpolation = false;
+        let filt = false;
+        let periods = 1.0;
+        let filter_limits = [0.1, 6.0];
+        
+        let result = process_stack(&stack.view(), frequency, 1.0/framerate,1.0/framerate ,&filter_limits,interpolation, filt );
+        
+        assert!(result.is_ok());
+    }
 }

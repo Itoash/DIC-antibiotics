@@ -33,6 +33,15 @@ class ImageHolder:
         print(f'Raw image shape is:{raws.shape}')
         print(f'Limits are {self.limits}')
         print(f'Nperiods is {nperiods}')
+        if self.filt_freqs[1] > self.framerate/2:
+            print(f'Warning: filter frequency {self.filt_freqs[1]} is higher than Nyquist frequency {self.framerate/2}. Setting to Nyquist frequency.')
+            self.filt_freqs = (self.filt_freqs[0], self.framerate/2)
+        if self.filt_freqs[0] < 0:
+            print(f'Warning: filter frequency {self.filt_freqs[0]} is lower than 0. Setting to 0.')
+            self.filt_freqs = (0, self.filt_freqs[1])
+        if self.filt_freqs[0] >  self.frequency:
+            print(f'Warning: filter frequency {self.filt_freqs[0]} is higher than frequency {self.frequency}. Setting to frequency.')
+            self.filt_freqs = (self.frequency, self.filt_freqs[1])
         self.AC, self.DC, self.signaldata,self.limits = get_AC_data(raws,
                                                            frequency=self.frequency,
                                                            framerate=self.framerate,

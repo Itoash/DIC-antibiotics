@@ -378,7 +378,7 @@ cdef tuple findInterior(np.ndarray[FLOAT64_t, ndim=2] image,
     # Iterate threshold
     if len(interior_contours) == 0:
         while len(interior_contours) == 0 and otsu_thresh < np.max(image_8bit):
-            otsu_thresh *=1.2
+            otsu_thresh *=0.8 # decrease threshold drastically
             # Apply threshold inside the mask
             thresholded = np.zeros_like(image_8bit, dtype=np.uint8)
             thresholded[(image_8bit >= otsu_thresh) & cell_mask] = 255
