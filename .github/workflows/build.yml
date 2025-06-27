@@ -3,7 +3,7 @@ name: Build Wheels
 
 on:
   push:
-    branches: [AnalysisGUI-Rust]
+    branches: [main]
   pull_request:
 
 jobs:
