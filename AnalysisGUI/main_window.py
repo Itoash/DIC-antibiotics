@@ -243,7 +243,7 @@ class MainWindow(QtWidgets.QMainWindow):
     def addImages(self):
         options = QtWidgets.QFileDialog.Options()
         filename = QtWidgets.QFileDialog.getExistingDirectory(
-            self, "Open File", QtCore.QDir.currentPath())
+            self, "Open File", QtCore.QDir.homePath(), options=options)
         if filename:
             self.clearBuffer()
             ACpath = [f for f in os.listdir(filename) if 'ac' in f.lower()][0]
@@ -283,8 +283,79 @@ class MainWindow(QtWidgets.QMainWindow):
         
             
 
+    def loadSpoolFolder(self):
+        # get elected directory and run through some checks:
+        index = self.docks.treeview.currentIndex()
+        filename = self.docks.treeview.model.filePath(index)
+        
+        spoolfiles = [
+            f for f in os.listdir(filename) if '.DStore' not in f
+        ]
+        if len(spoolfiles)<1:
+            msg = QtWidgets.QMessageBox()
+            msg.setIcon(QtWidgets.QMessageBox.Critical)
+            msg.setText("No valid files!")
+            msg.setInformativeText(
+                'Chosen directory contains no valid spooled data (.sifx and .ini headers, .dat data files)')
+            msg.setWindowTitle("TypeError")
+            msg.exec_()
 
-
+            return
+        heights = set()
+        widths = set()
+        for file in spoolfiles:
+            ini_file = [f for f in os.listdir(file) if f.endswith('.ini')]
+            sifx_file = [f for f in os.listdir(file) if f.endswith('.sifx')]
+            if len(ini_file) != 1 or len(sifx_file) != 1:
+                msg = QtWidgets.QMessageBox()
+                msg.setIcon(QtWidgets.QMessageBox.Critical)
+                msg.setText("Invalid spool files!")
+                msg.setInformativeText(
+                    'Each spool folder should contain exactly one .ini and one .sifx file.')
+                msg.setWindowTitle("TypeError")
+                msg.exec_()
+                return
+            with open(ini_file[0], 'r') as f:
+                lines = f.readlines()
+                for line in lines:
+                    if 'AOIHeight' in line:
+                        AOIheight = int(line.split('=')[1].strip())
+                    if 'AOIWidth' in line:
+                        AOIwidth = int(line.split('=')[1].strip())
+            heights.add(AOIheight)
+            widths.add(AOIwidth)
+        # Check 2: if there are multiple heights or widths, display message and abort
+        if len(heights) > 1 or len(widths) > 1:
+            msg = QtWidgets.QMessageBox()
+            msg.setIcon(QtWidgets.QMessageBox.Critical)
+            msg.setText("Different sizes!")
+            msg.setInformativeText(
+                'Spool files have different sizes. Select a folder with spools of the same size.')
+            msg.setWindowTitle("TypeError")
+            msg.exec_()
+            return
+        # Create a custom dialog to get number of locations and starting index
+        num_locations, start_index = self.show_parameter_dialog()
+        if num_locations is None or start_index is None:
+            print("Dialog cancelled or invalid input")
+            return
+        # Check if start_index is within bounds
+        if start_index < 0 or start_index >= len(spoolfiles):
+            QtWidgets.QMessageBox.warning(
+                self, "Index Error", "Starting index is out of bounds.")
+            return
+        print("Got parameters:", num_locations, start_index)
+        tic = tm.time()
+        for i in range(start_index, len(spoolfiles), num_locations):
+            if os.path.isdir(spoolfiles[i]):
+                # load images from directory
+                self.loadstack(spoolfiles[i])
+                self.addImage(resort=False)
+            else:
+                # something happened to directory during segmentation
+                print(f"Skipping {spoolfiles[i]} as it is not a directory")
+                continue
+        self.analysisImages.sortByAbsTime()
     def loadDay(self):
         index = self.docks.treeview.currentIndex()
         filename = self.docks.treeview.model.filePath(index)
@@ -316,17 +387,79 @@ class MainWindow(QtWidgets.QMainWindow):
         times = [t-times[0] for t in times]
         files = [f for _, f in sorted(zip(times, files))]
         self.clearBuffer()
+        # Create a custom dialog to get number of locations and starting index
+        num_locations, start_index = self.show_parameter_dialog()
+        if num_locations is None or start_index is None:
+            print("Dialog cancelled or invalid input")
+            return
+        # Check if start_index is within bounds
+        if start_index < 0 or start_index >= len(files):
+            QtWidgets.QMessageBox.warning(
+                self, "Index Error", "Starting index is out of bounds.")
+            return
+        print("Got parameters:", num_locations, start_index)
         tic = tm.time()
-        for i, f in enumerate(files):
-            if os.path.isdir(f):
-                self.loadstack(f)
+        for i in range(start_index, len(files), num_locations):
+            if os.path.isdir(files[i]):
+                # load images from directory
+                self.loadstack(files[i])
                 self.addImage(resort=False)
             else:
                 # something happened to directory during segmentation
-                break
+                print(f"Skipping {files[i]} as it is not a directory")
+                continue
         toc = tm.time()-tic
         print(f"Segmentation and processing took {toc}:3fs")
 
+    def show_parameter_dialog(self):
+        # Create a custom dialog to get number of locations and starting index
+        dialog = QtWidgets.QDialog(self)
+        dialog.setWindowTitle("Select Parameters")
+        dialog.setModal(True)  # Make dialog modal
+        dialog.resize(300, 150)  # Set a reasonable size
+        
+        layout = QtWidgets.QFormLayout(dialog)
+        
+        # Number of locations input
+        num_locations_input = QtWidgets.QSpinBox(dialog)
+        num_locations_input.setMinimum(1)
+        num_locations_input.setMaximum(1000)
+        num_locations_input.setValue(1)
+        
+        # Starting index input
+        start_index_input = QtWidgets.QSpinBox(dialog)
+        start_index_input.setMinimum(0)
+        start_index_input.setMaximum(10000)
+        start_index_input.setValue(0)
+        
+        layout.addRow("Number of locations:", num_locations_input)
+        layout.addRow("Starting index:", start_index_input)
+        
+        # Button box
+        button_box = QtWidgets.QDialogButtonBox(
+            QtWidgets.QDialogButtonBox.Ok | QtWidgets.QDialogButtonBox.Cancel, 
+            dialog
+        )
+        layout.addWidget(button_box)
+        
+        # Connect signals
+        button_box.accepted.connect(dialog.accept)
+        button_box.rejected.connect(dialog.reject)
+        
+        # Execute dialog and handle result
+        if dialog.exec_() == QtWidgets.QDialog.Accepted:
+            num_locations = num_locations_input.value()
+            start_index = start_index_input.value()
+            
+            
+            # Process the values as needed
+            print(f"Selected: {num_locations} locations starting from index {start_index}")
+            
+            return num_locations, start_index
+        else:
+            # User cancelled
+            print("Dialog cancelled")
+            return None, None
     def addImage(self, img=None,resort = True):
 
         DC = self.imageData.DC
@@ -339,7 +472,7 @@ class MainWindow(QtWidgets.QMainWindow):
             f'Segbuffer: masks/DCs{len(self.segBuffer.masks),len(self.segBuffer.images)}')
         print(
             f'Analysis buff: ACs/DCs{len(self.analysisImages.ACs),len(self.analysisImages.DCs)}')
-
+    
     def clearBuffer(self):
         self.segBuffer.clear()
         self.analysisImages.clear()
@@ -361,6 +494,9 @@ class MainWindow(QtWidgets.QMainWindow):
             "&Load Spool", self, shortcut="Ctrl+P", triggered=self.loadspool)
         self.loadDayAct = QtWidgets.QAction(
             "&Load Folder of Stacks", self, shortcut="Ctrl+A", triggered=self.loadDay)
+        self.loadSpoolsAct = QtWidgets.QAction(
+            "&Load Folder of Spools", self, shortcut="Ctrl+R", triggered=self.loadSpoolFolder)
+        
         self.exitAct = QtWidgets.QAction(
             "&Exit", self, shortcut="Ctrl+Q", triggered=self.closeApp)
         self.segmentAct = QtWidgets.QAction(
@@ -395,6 +531,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self.fileMenu.addAction(self.saveAct)
         self.fileMenu.addAction(self.loadAct)
         self.fileMenu.addAction(self.loadSpoolAct)
+        self.fileMenu.addAction(self.loadSpoolsAct)
         self.fileMenu.addAction(self.loadDayAct)
         self.fileMenu.addSeparator()
         self.fileMenu.addAction(self.exitAct)

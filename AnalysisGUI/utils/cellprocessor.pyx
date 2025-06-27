@@ -23,6 +23,7 @@ FEATURE_NAMES = ['idx', 'times', 'position', 'area', 'Ellipse angle', 'Ellipse m
 ctypedef np.npy_bool BOOL_t
 ctypedef np.int32_t INT32_t
 ctypedef np.float64_t FLOAT64_t
+ctypedef np.uint8_t UINT8_t
 
 def process_frame_py(frame_idx, AC, DC, labels):
     return process_frame(frame_idx, AC, DC, labels)
@@ -304,13 +305,15 @@ cdef list process_label(np.ndarray AC, np.ndarray DC, np.ndarray label, float co
             intbackcontrast, intcontcontrast, ACDCratio, solidity, intcontours, contour]
 
 
-cdef tuple findInterior(np.ndarray[FLOAT64_t, ndim=2] image, np.ndarray[BOOL_t, ndim=2] cell_mask, 
-                      float min_area_ratio=0.05, float max_area_ratio=1.0):
+cdef tuple findInterior(np.ndarray[FLOAT64_t, ndim=2] image,
+                        np.ndarray[BOOL_t, ndim=2] cell_mask,
+                        float min_area_ratio=0.05,
+                        float max_area_ratio=1.0):
     """
-    Find interior regions within a cell mask based on intensity thresholding.
+    Find interior regions within a cell mask using Otsu thresholding.
     
     Args:
-        image: Intensity image
+        image: Intensity image (float64)
         cell_mask: Binary mask of the cell region
         min_area_ratio: Minimum area ratio threshold for interior regions
         max_area_ratio: Maximum area ratio threshold for interior regions
@@ -318,85 +321,99 @@ cdef tuple findInterior(np.ndarray[FLOAT64_t, ndim=2] image, np.ndarray[BOOL_t, 
     Returns:
         Tuple of (interior_contours, interior_mask)
     """
-    # Compute areas and thresholds once
     cdef int cell_area = np.count_nonzero(cell_mask)
     cdef int min_area = <int>(cell_area * min_area_ratio)
     cdef int max_area = <int>(cell_area * max_area_ratio)
-    
-    # Pre-allocate arrays
-    cdef np.ndarray[INT32_t, ndim=2] interior_mask = np.zeros_like(cell_mask, dtype=np.int32)
-    cdef np.ndarray[FLOAT64_t, ndim=2] masked_image = np.zeros_like(image)
-    
-    # Create masked image with vectorized operations (faster than iterating)
-    masked_image = np.where(cell_mask, image, 0)
-    
-    # Calculate mean intensity more efficiently using numpy directly
-    cdef double mean_intensity = 0.0
-    cdef np.ndarray cell_values = image[cell_mask]
-    if len(cell_values) > 0:
-        mean_intensity = np.mean(cell_values)
-    
-    # Try adaptive threshold finding with binary search
-    cdef double high_thresh = np.max(masked_image) if np.max(masked_image) > 0 else mean_intensity
-    cdef double low_thresh = mean_intensity/1.5
-    cdef double mid_thresh = mean_intensity
-    cdef tuple contours
     cdef np.ndarray thresholded
-    cdef int max_iterations = 15  # More iterations for better convergence
-    cdef int iteration = 0
-    cdef double target_area = cell_area * 0.5  # Target ~50% of cell area for interior
-    cdef double current_area = 0
-    cdef double prev_thresh = -1
-    
-    # First try with mean intensity
-    _, thresholded = cv2.threshold(masked_image, mean_intensity, 255, cv2.THRESH_BINARY)
-    contours, _ = cv2.findContours(thresholded.astype(np.uint8), cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-    
-    # If no contours found or too small/large, use binary search to find appropriate threshold
-    if not contours or cv2.contourArea(contours[0]) < min_area or cv2.contourArea(contours[0]) > max_area:
-        while iteration < max_iterations and abs(high_thresh - low_thresh) > 0.01:
-            iteration += 1
-            
-            # Avoid repeat calculations
-            if mid_thresh == prev_thresh:
-                break
-                
-            prev_thresh = mid_thresh
-            mid_thresh = (high_thresh + low_thresh) / 2.0
-            
-            _, thresholded = cv2.threshold(masked_image, mid_thresh, 255, cv2.THRESH_BINARY)
-            contours, _ = cv2.findContours(thresholded.astype(np.uint8), cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-            
-            if not contours:
-                high_thresh = mid_thresh
-                continue
-                
-            current_area = sum(cv2.contourArea(c) for c in contours)
-            
-            # Adjust threshold based on area
-            if current_area < target_area:
-                high_thresh = mid_thresh
-            else:
-                low_thresh = mid_thresh
-    
-    # Process contours efficiently
+    cdef tuple contours
     cdef list interior_contours = []
     cdef double area
-    cdef np.ndarray cont, start, cont_reshaped
-    
+    cdef np.ndarray cont, cont_reshaped, start
+    cdef np.ndarray[INT32_t, ndim=2] interior_mask = np.zeros_like(cell_mask, dtype=np.int32)
+
+    # Masked pixel values
+    cdef np.ndarray[FLOAT64_t, ndim=1] cell_values = image[cell_mask]
+
+    if cell_values.size == 0:
+        # Nothing to threshold
+        return [], interior_mask.astype(bool)
+
+    # Normalize to 0..255 uint8 for Otsu threshold
+    cdef np.ndarray[UINT8_t, ndim=1] cell_values_8bit
+    cdef double min_val = np.min(cell_values)
+    cdef double max_val = np.max(cell_values)
+
+    if max_val == min_val:
+        # Uniform intensity, no valid thresholding possible
+        return [], interior_mask.astype(bool)
+
+    cell_values_norm = (cell_values - min_val) / (max_val - min_val)
+    cell_values_8bit = (cell_values_norm * 255).clip(0, 255).astype(np.uint8)
+
+    # Compute Otsu threshold on masked region
+    cdef double otsu_thresh
+    otsu_thresh, _ = cv2.threshold(cell_values_8bit, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
+
+
+    # First convert image to 8bit using the same min max values
+    cdef np.ndarray[FLOAT64_t, ndim=2] image_norm = (image - min_val) / (max_val - min_val)
+    image_norm = np.clip(image_norm, 0, 1)
+    cdef np.ndarray[UINT8_t, ndim=2] image_8bit = (image_norm * 255).astype(np.uint8)
+
+    # Apply threshold inside the mask
+    thresholded = np.zeros_like(image_8bit, dtype=np.uint8)
+    thresholded[(image_8bit >= otsu_thresh) & cell_mask] = 255
+
+    # Find contours
+    contours, _ = cv2.findContours(thresholded, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+
+    # Filter by area
     for cont in contours:
         area = cv2.contourArea(cont)
         if min_area <= area <= max_area:
             interior_contours.append(cont)
             cv2.drawContours(interior_mask, [cont], -1, 255, -1)
-    
-    # Pre-allocate results list and process contours
+
+    # if no contours found:
+    # Iterate threshold
+    if len(interior_contours) == 0:
+        while len(interior_contours) == 0 and otsu_thresh < np.max(image_8bit):
+            otsu_thresh *=1.2
+            # Apply threshold inside the mask
+            thresholded = np.zeros_like(image_8bit, dtype=np.uint8)
+            thresholded[(image_8bit >= otsu_thresh) & cell_mask] = 255
+
+            # Find contours
+            contours, _ = cv2.findContours(thresholded, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+
+            # Filter by area
+            for cont in contours:
+                area = cv2.contourArea(cont)
+                if min_area <= area <= max_area:
+                    interior_contours.append(cont)
+                    cv2.drawContours(interior_mask, [cont], -1, 255, -1)
+    # Finally, fallback on average thresholding
+    if len(interior_contours) == 0:
+        thresh = np.mean(image_8bit)
+        # Apply threshold inside the mask
+        thresholded = np.zeros_like(image_8bit, dtype=np.uint8)
+        thresholded[(image_8bit >= thresh) & cell_mask] = 255
+        # Find contours
+        contours, _ = cv2.findContours(thresholded, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+
+        # Filter by area
+        for cont in contours:
+            area = cv2.contourArea(cont)
+            if min_area <= area <= max_area:
+                interior_contours.append(cont)
+                cv2.drawContours(interior_mask, [cont], -1, 255, -1)
+
+    # Return closed contours
     cdef list results = []
-    
     for cont in interior_contours:
         cont_reshaped = cont.reshape(cont.shape[0], 2)
         if len(cont_reshaped) > 0:
             start = cont_reshaped[0].reshape(1, 2)
             results.append(np.vstack((cont_reshaped, start)))
-    
+
     return results, interior_mask.astype(bool)
