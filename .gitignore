@@ -47,3 +47,6 @@ Thumbs.db
 # Cibuildwheel output
 *.whl
 wheels/
+
+# Local testing scripts
+build_deploy.sh
