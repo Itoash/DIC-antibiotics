@@ -289,7 +289,7 @@ class MainWindow(QtWidgets.QMainWindow):
         filename = self.docks.treeview.model.filePath(index)
         
         spoolfiles = [
-            f for f in os.listdir(filename) if '.DStore' not in f
+            f for f in os.listdir(filename) if '.DS_Store' not in f
         ]
         if len(spoolfiles)<1:
             msg = QtWidgets.QMessageBox()
@@ -304,8 +304,8 @@ class MainWindow(QtWidgets.QMainWindow):
         heights = set()
         widths = set()
         for file in spoolfiles:
-            ini_file = [f for f in os.listdir(file) if f.endswith('.ini')]
-            sifx_file = [f for f in os.listdir(file) if f.endswith('.sifx')]
+            ini_file = [f for f in os.listdir(os.path.join(filename,file)) if f.endswith('.ini')]
+            sifx_file = [f for f in os.listdir(os.path.join(filename,file)) if f.endswith('.sifx')]
             if len(ini_file) != 1 or len(sifx_file) != 1:
                 msg = QtWidgets.QMessageBox()
                 msg.setIcon(QtWidgets.QMessageBox.Critical)
@@ -315,7 +315,7 @@ class MainWindow(QtWidgets.QMainWindow):
                 msg.setWindowTitle("TypeError")
                 msg.exec_()
                 return
-            with open(ini_file[0], 'r') as f:
+            with open(os.path.join(filename,file,ini_file[0]), 'r') as f:
                 lines = f.readlines()
                 for line in lines:
                     if 'AOIHeight' in line:
@@ -347,9 +347,9 @@ class MainWindow(QtWidgets.QMainWindow):
         print("Got parameters:", num_locations, start_index)
         tic = tm.time()
         for i in range(start_index, len(spoolfiles), num_locations):
-            if os.path.isdir(spoolfiles[i]):
+            if os.path.isdir(os.path.join(filename,spoolfiles[i])):
                 # load images from directory
-                self.loadstack(spoolfiles[i])
+                self.loadspool(os.path.join(filename,spoolfiles[i]))
                 self.addImage(resort=False)
             else:
                 # something happened to directory during segmentation
