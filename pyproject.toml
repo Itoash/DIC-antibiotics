@@ -1,6 +1,6 @@
 [project]
 name = "AnalysisGUI"
-version = "0.1.1"
+version = "0.1.2"
 description = "AC/DC cell analysis"
 authors = [{ name = "Victor Ionescu", email = "vionescu@biodyn.ro" }]
 license = "MIT"

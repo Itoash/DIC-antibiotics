@@ -46,7 +46,16 @@ class DICWidget(pg.ImageView):
         # connect mouseMove and time change signals to display tooltip with px info
         self.imageItem.scene().sigMouseMoved.connect(self.mouseMove)
         self.sigTimeChanged.connect(self.tChange)
-
+        self.ui.roiBtn.clicked.connect(self.connectSignals)
+        
+    def connectSignals(self):
+        if self.ui.roiBtn.isChecked():
+            print("Connected Raws to signals")
+            
+        else:
+            print("Disconnected Raws from signals")
+            
+            self.parent.updateSignals(np.ones_like(self.imageSource.AC))
     def tChange(self, ind, times):
         # get array indexes for mouse
         row, col = int(self.cursor_position.x()), int(self.cursor_position.y())
@@ -92,6 +101,7 @@ class DICWidget(pg.ImageView):
         super().roiChanged()
         if self.image is None:
             return
+        
         # gets bounding box of roi, and gets coords
         image = self.getProcessedImage()
         colmaj = self.imageItem.axisOrder == 'col-major'
@@ -112,7 +122,7 @@ class DICWidget(pg.ImageView):
         mask[xstart:xstop, ystart:ystop] = 1
 
         self.parent.updateSignals(mask)  # proxy call to signals plot
-
+    
 
 # holds signal plots, and has functionality for updating analysis range (by proxy)
 class Signals(QtWidgets.QWidget):  # class for handling signal data and updating plots
@@ -304,6 +314,16 @@ class DCWidget(pg.ImageView):
         self.cursor_position = QtCore.QPoint(0, 0)
         self.getImageItem().scene().sigMouseMoved.connect(self.mouseMove)
 
+        self.ui.roiBtn.clicked.connect(self.connectSignals)
+        
+    def connectSignals(self):
+        if self.ui.roiBtn.isChecked():
+            print("Connected DC to signals")
+            
+        else:
+            print("Disconnected DC from signals")
+            
+            self.parent.updateSignals(np.ones_like(self.imageSource.AC))
     def mouseMove(self, abs_pos):
 
         pos = self.imageItem.mapFromScene(abs_pos)
@@ -368,6 +388,16 @@ class ACWidget(pg.ImageView):
         self.cursor_position = QtCore.QPoint(0, 0)
         self.imageItem.scene().sigMouseMoved.connect(self.mouseMove)
 
+        self.ui.roiBtn.clicked.connect(self.connectSignals)
+        
+    def connectSignals(self):
+        if self.ui.roiBtn.isChecked():
+            print("Connected AC to signals")
+            
+        else:
+            print("Disconnected AC from signals")
+            
+            self.parent.updateSignals(np.ones_like(self.imageSource.AC))
     def mouseMove(self, abs_pos):
 
         pos = self.imageItem.mapFromScene(abs_pos)
