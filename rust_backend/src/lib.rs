@@ -167,16 +167,17 @@ pub mod utils{
             }
         }
         /// Generate trivial poles/zeros for prototype BUtterworth filter
-        fn buttap(N:isize)->(Vec<Complex<f32>>,Vec<Complex<f32>>,f32){
-            assert!(N>0);
+        fn buttap(n:isize)->(Vec<Complex<f32>>,Vec<Complex<f32>>,f32){
+            assert!(n>0);
             let z = Vec::new();
-            let m :Vec<isize>= (-N+1..N).step_by(2).collect();
+            let m :Vec<isize>= (-n+1..n).step_by(2).collect();
             let p = (0..m.len())
-                    .map(|i| -Complex::new(0f32,m[i] as f32*PI/(2f32*N as f32)).exp())
+                    .map(|i| -Complex::new(0f32,m[i] as f32*PI/(2f32*n as f32)).exp())
                     .collect();
             let k = 1f32;
             (z,p,k)
         }
+        #[allow(dead_code)]
         /// Scale low-pass zeros/poles and gain to unit circle for low-pass
         fn lp2lp_zpk(z:&[Complex<f32>],p:&[Complex<f32>],k:f32,wo:f32)->(Vec<Complex<f32>>,Vec<Complex<f32>>,f32){
             // get relative degree
@@ -220,9 +221,11 @@ pub mod utils{
                         into_iter()
                         .map(|z|z-(z*z-wo_c*wo_c).sqrt())
                         .collect();
+
+            
             p_bp.extend(p_bp_right);
             
-            let z = Complex::new(6.5823f32,-0.124f32);
+            
             
             //Add zeros at infinity
             z_bp.extend(vec![Complex::new(0f32,0f32);degree as usize]);
@@ -479,7 +482,6 @@ pub mod utils{
                 if p1.im == 0. && sum_reals ==0{
                     if !z_new.is_empty(){
                         let z1_idx = _nearest_real_complex_idx(&z_new, p1, Nearest::Real);
-                        let z1 = z_new[z1_idx];
                         z_new.remove(z1_idx);
                         sos[si] = _single_zpksos(&z_new, &p_new, k);
                     }
@@ -497,7 +499,7 @@ pub mod utils{
                         z_new.remove(z1_idx);
                         sos[si] = _single_zpksos(&[z1, z1.conj()], &[p1, p1.conj()], 1f32);
                 } else{
-                    let mut p2 = Complex::new(0f32,0f32);
+                    let p2;
                     if p1.is_real()[0]{ // real pole, get another real pole (worst one)
                         let p_reals_bool = p_new.is_real();
                         let prealidx:Vec<usize> = (0..p_reals_bool.len()).filter(|&i|p_reals_bool[i]).collect();
@@ -548,13 +550,13 @@ pub mod utils{
             assert!(cutoffs[0]<cutoffs[1]);
             assert!(!cutoffs.iter().filter(|&x| *x < fs/2f32).collect::<Vec<_>>().is_empty());
             // normalize cutoffs
-            let Wn:Vec<f32> = cutoffs.iter().map(|&x| x/(fs/2f32)).collect();
+            let wn:Vec<f32> = cutoffs.iter().map(|&x| x/(fs/2f32)).collect();
             
             // get zeros/poles/gain for this order of filter from Butter formula
             let (z,p,k) = buttap(order.try_into().unwrap());
             // Warp frequencies for digital filter design
             let fs = 2f32;
-            let warped: Vec<f32> = Wn.iter().map(|&x| 2f32 * fs * (PI * x / fs).tan()).collect();
+            let warped: Vec<f32> = wn.iter().map(|&x| 2f32 * fs * (PI * x / fs).tan()).collect();
             
             let bw = warped[1]-warped[0];//bandwidth
             let wo = (warped[0]*warped[1]).sqrt(); //omega-0, center frequency
@@ -815,7 +817,7 @@ pub mod utils{
         #[inline(always)]
         /// Implement a Goerzel algorithm iteratively over a given arrayview
         /// Takes in precomputed w and coeff
-        pub fn goerzel(w:f32,coeff:f32,signal:ArrayView1<f32>)->f32{
+        pub fn goerzel(coeff:f32,signal:ArrayView1<f32>)->f32{
             
 
             let mut prev1 = 0f32;
@@ -840,7 +842,7 @@ pub mod utils{
             .into_par_iter()     
             .map(|view| {
             
-            goerzel(w, coeff, view)*2f32/n
+            goerzel( coeff, view)*2f32/n
         }).collect();
         
         Array2::from_shape_vec((height,width), result).expect("Problem in reshaping")
@@ -858,7 +860,7 @@ pub mod utils{
         }
     }
 pub mod ac{
-    use ndarray::{ArrayView3,ArrayViewMut3,Axis,Array1,ArrayView2,ShapeError,Array2,Array3,Zip};
+    use ndarray::{ArrayView3,Axis,Array1,ShapeError,Array2,Array3,Zip};
     use rayon::prelude::*;
     /// Gets mean over the first 2 axes in parallel;
     #[inline(always)]
@@ -997,7 +999,7 @@ pub mod ac{
                     
                     // Compute signal amplitude at specified freuency
                     let n = signal.dim();
-                    let power = goerzel(w, coeff, signal.view()) * 2f32 / n as f32;
+                    let power = goerzel( coeff, signal.view()) * 2f32 / n as f32;
 
                     //Assign results
                     *ac_point = power;
@@ -1215,14 +1217,9 @@ mod tests {
         let stack = Array3::<f32>::zeros((2048, 2048, 400));
         let frequency = 0.1;
         let framerate = 100.0;
-        let start = 0;
-        let end = 399;
-        let hardlimits = false;
         let interpolation = false;
         let filt = false;
-        let periods = 1.0;
         let filter_limits = [0.1, 6.0];
-        
         let result = process_stack(&stack.view(), frequency, 1.0/framerate,1.0/framerate ,&filter_limits,interpolation, filt );
         
         assert!(result.is_ok());

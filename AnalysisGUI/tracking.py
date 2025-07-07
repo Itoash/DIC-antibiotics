@@ -21,7 +21,7 @@ class TrackWindow(QtWidgets.QMainWindow):
     and analyzing cell lineages.
     """
     sigKeyPressed = QtCore.Signal(object)  # Signal for key press events
-
+    window_closed = QtCore.pyqtSignal()
     def __init__(self, segBuffer, analysisBuffer, parent = None,stabilize=False):
         """
         Initialize the TrackWindow with image buffers and analysis data.
@@ -41,7 +41,8 @@ class TrackWindow(QtWidgets.QMainWindow):
         self.brushsize = 3
         self.brushcolor = 0
         self.highlight = None  # For highlighting selected cells
-        
+        self.time_vis = None
+        self.cell_vis = None
         # Stabilize images if requested
         if stabilize:
             self._stabilize_images()
@@ -61,7 +62,10 @@ class TrackWindow(QtWidgets.QMainWindow):
     #################################
     # Initialization Helper Methods #
     #################################
-    
+    def closeEvent(self, event):
+        self.window_closed.emit()
+        event.accept()
+
     def _stabilize_images(self):
         """Stabilize images to reduce movement between frames."""
         if len(self.segBuffer.images) == len(self.analysisBuffer.ACs):
@@ -627,10 +631,11 @@ class TrackWindow(QtWidgets.QMainWindow):
             cell_keys.sort()
             cell_data = {i: cell_data[i] for i in cell_keys}
             print(f'Calculating per cell took {round(tm.time()-tic,3)} for {len(cell_data.keys())} cells.')
-            
+            if self.time_vis is not None:
+                self.time_vis.close()
             # Open the visualizer
-            self.vis = CellViewer(cell_data, ACs, DCs, times,self)
-            self.vis.show()
+            self.time_vis = CellViewer(cell_data, ACs, DCs, times,self)
+            self.time_vis.show()
             
     def openTimeSeries(self):
         """Open the time series visualizer window."""
@@ -653,10 +658,11 @@ class TrackWindow(QtWidgets.QMainWindow):
             cell_keys.sort()
             cell_data = {i: cell_data[i] for i in cell_keys}
             print(f'Calculating per cell took {round(tm.time()-tic,3)} for {len(cell_data.keys())} cells.')
-            
+            if self.cell_vis is not None:
+                self.cell_vis.close()
             # Open the visualizer
-            self.vis = DataVisualizerApp(cell_data,self)
-            self.vis.show()
+            self.cell_vis = DataVisualizerApp(cell_data,self)
+            self.cell_vis.show()
 
     def saveCells(self,path):
         """Save the current cell data to a file."""

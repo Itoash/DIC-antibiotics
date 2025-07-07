@@ -50,6 +50,7 @@ class DataVisualizerApp(QMainWindow):
         self.lineage_checkbox = QCheckBox("Show selected parameter for all objects in current lineage")
         self.lineage_checkbox.stateChanged.connect(self.toggle_lineage_view)
         left_layout.addWidget(self.lineage_checkbox)
+        
         # Add range control buttons
         range_box = QGroupBox("Range Controls")
         range_layout = QVBoxLayout(range_box)
@@ -273,28 +274,3 @@ class DataVisualizerApp(QMainWindow):
         self.update_plot()
         
 
-# Example usage
-if __name__ == '__main__':
-    # Example data with more objects sharing the same parameters
-    data = {
-        'object1': {
-            'time': [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
-            'temperature': [20, 21, 22, 23, 22, 21, 22, 23, 24, 23, 22],
-            'pressure': [1013, 1014, 1012, 1010, 1009, 1011, 1012, 1013, 1014, 1015, 1013]
-        },
-        'object2': {
-            'time': [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
-            'temperature': [25, 26, 27, 28, 27, 26, 25, 24, 25, 26, 27],
-            'humidity': [60, 58, 55, 54, 56, 59, 62, 65, 63, 60, 58]
-        },
-        'object3': {
-            'time': [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
-            'temperature': [18, 19, 21, 22, 23, 24, 23, 22, 20, 19, 18],
-            'pressure': [1020, 1019, 1018, 1017, 1016, 1015, 1016, 1017, 1018, 1019, 1020]
-        }
-    }
-    
-    app = QApplication(sys.argv)
-    window = DataVisualizerApp(data)
-    window.show()
-    sys.exit(app.exec_())

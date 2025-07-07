@@ -18,7 +18,7 @@ dependencies = [
     "cython >=3.0.12",
     "natsort ~=8.4.0",
     "aicsimageio ~=4.14.0",
-    "omnipose @ git+https://github.com/kevinjohncutler/omnipose.git@18ece331bc4d468a670b2c6df8eb1e70bd0f1120",
+    "omnipose @ git+https://github.com/kevinjohncutler/omnipose.git@75e4029c328963c483392e9c41ae0111a1a75f52",
     "scipy ~=1.11",
     "loky ~=3.5.1",
     "dill ~=0.3.9",

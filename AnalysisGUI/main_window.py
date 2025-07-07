@@ -34,6 +34,10 @@ class MainWindow(QtWidgets.QMainWindow):
         self.analysisImages = AnalysisBuffer(self.segBuffer)
         # make a dock area that auto-inits the predetermined plots
         self.docks = AnalysisArea(self)
+        self.segmentor = None
+        self.tracker = None
+        
+        
         self.setCentralWidget(self.docks)
 
         # update all plots, create menus and set a title
@@ -216,9 +220,16 @@ class MainWindow(QtWidgets.QMainWindow):
             msg.setWindowTitle("IndexError")
             msg.exec_()
             return
-        if 'segmentor' in self.__dict__.keys():
-            self.segmentor.close()
+        if self.segmentor is not None:
+            msg = QtWidgets.QMessageBox()
+            msg.setIcon(QtWidgets.QMessageBox.Critical)
+            msg.setText("Segmentor already open!")
+            msg.setInformativeText('Segmentor window is already open. Please close and retrack if modifications are in order.')
+            msg.setWindowTitle("SegmentorOpen")
+            msg.exec_()
+            return
         self.segmentor = SegmentWindow(self.segBuffer,self.analysisImages)
+        self.segmentor.window_closed.connect(self.segmentor_closed)
         self.segmentor.show()
 
     def track(self):
@@ -230,11 +241,24 @@ class MainWindow(QtWidgets.QMainWindow):
             msg.setWindowTitle("IndexError")
             msg.exec_()
             return
-        if 'tracker' in self.__dict__.keys():
-            self.tracker.close()
+        if self.tracker is not None:
+            msg = QtWidgets.QMessageBox()
+            msg.setIcon(QtWidgets.QMessageBox.Critical)
+            msg.setText("Tracker already open!")
+            msg.setInformativeText('Tracker window is already open. Please close and resegment if modifications are in order.')
+            msg.setWindowTitle("TrackerOpen")
+            msg.exec_()
+            return
+            
+
         self.tracker = TrackWindow(self.segBuffer, self.analysisImages,parent=self)
+        self.tracker.window_closed.connect(self.tracker_closed)
         self.tracker.show()
 
+    def tracker_closed(self):
+        self.tracker = None
+    def segmentor_closed(self):
+        self.segmentor = None
     def save(self):
         # save the current image to a file
         filename = QtWidgets.QFileDialog.getExistingDirectory(self, "Save Cell data" )
@@ -345,6 +369,11 @@ class MainWindow(QtWidgets.QMainWindow):
                 self, "Index Error", "Starting index is out of bounds.")
             return
         print("Got parameters:", num_locations, start_index)
+        self.clearBuffer()
+        # if 'segmentor' in self.__dict__.keys():
+        #     self.segmentor.close()
+        # if 'tracker' in self.__dict__.keys():
+        #     self.tracker.close()
         tic = tm.time()
         for i in range(start_index, len(spoolfiles), num_locations):
             if os.path.isdir(os.path.join(filename,spoolfiles[i])):
@@ -356,6 +385,9 @@ class MainWindow(QtWidgets.QMainWindow):
                 print(f"Skipping {spoolfiles[i]} as it is not a directory")
                 continue
         self.analysisImages.sortByAbsTime()
+
+
+
     def loadDay(self):
         index = self.docks.treeview.currentIndex()
         filename = self.docks.treeview.model.filePath(index)
@@ -386,7 +418,7 @@ class MainWindow(QtWidgets.QMainWindow):
                     times.append(int(ts[1:3])+12*60)
         times = [t-times[0] for t in times]
         files = [f for _, f in sorted(zip(times, files))]
-        self.clearBuffer()
+        
         # Create a custom dialog to get number of locations and starting index
         num_locations, start_index = self.show_parameter_dialog()
         if num_locations is None or start_index is None:
@@ -398,6 +430,11 @@ class MainWindow(QtWidgets.QMainWindow):
                 self, "Index Error", "Starting index is out of bounds.")
             return
         print("Got parameters:", num_locations, start_index)
+        self.clearBuffer()
+        # if 'segmentor' in self.__dict__.keys():
+        #     self.segmentor.close()
+        # if 'tracker' in self.__dict__.keys():
+        #     self.tracker.close()
         tic = tm.time()
         for i in range(start_index, len(files), num_locations):
             if os.path.isdir(files[i]):

@@ -9,15 +9,9 @@ Created on Mon Jan  6 12:40:26 2025
 import cv2
 import numpy as np
 import matplotlib.pyplot as plt
-from os import listdir
-from os.path import isfile, join
-from numba import jit
 import concurrent.futures
-import time
 from scipy.spatial import distance_matrix
-from skimage.draw import polygon, line
 from copy import deepcopy
-from numba import njit
 import os
 
 def get_warp(img1, img2, motion=cv2.MOTION_TRANSLATION):
@@ -172,379 +166,8 @@ def apply_warping_fullview(images, warp_stack=None, PATH=None):
     return imgs
 
 
-@njit
-def filterframe(image: np.ndarray, col: int):
-    dims = image.shape
-    filtered = image.flatten()
-    for i in range(len(filtered)):
-        if filtered[i] != 1.0:
-            filtered[i] = 0
-    return filtered.reshape(dims).T
-
-    # more stuff needed to implement in this function:
-    # continuity
-    # boundary conditions
-    # union of most likely candidates by overlap
-    # separation of candidates based on nodes
-    # drawing in missing cells
-    # discarding garbage at the end
 
 
-class basicplot:  # fucked up GUI
-    def __init__(self, image, colpositions, colareas, index):
-        print("Loaded image "+str(index)+"of filetype ")
-        self.image = image
-        self.fig = plt.figure()
-        plt.ion()
-        plt.imshow(image)
-        plt.show(block=False)
-        self.previmage = image
-        self.colpositions = colpositions
-        self.prevpos = colpositions
-        self.colareas = colpositions
-        self.prevarea = colareas
-        self.imgindex = index
-        self.mode = 'CLI'
-        self.selectedcolor = None
-        self.returnvalue = self.image
-        self.drawing = False  # Track if we are currently drawing
-        self.disabledrawing = False
-        self.disableerasing = False
-        self.xs = []  # List to store x coordinates of the drawn points
-        self.ys = []
-
-    def mouse_event(self, event):
-        print('\n x: {} , y: {},imvalue {}'.format(event.xdata,
-              event.ydata, self.image[int(event.ydata), int(event.xdata)]))
-
-    def undo(self):
-        print("Undid")
-        self.image = self.previmage
-        self.colpositions = self.prevpos
-        self.colareas = self.prevarea
-        if isinstance(self.image, np.ndarray):
-            if np.sum(self.image-self.previmage) == 0:
-
-                print("Did nothing")
-
-    def updateimage(self, newvalue):
-        self.previmage = self.image.copy()
-        self.image = newvalue
-
-    def updatedata(self, area, pos):
-        self.prevpos = self.colpositions
-        self.colpositions = pos
-        self.prevarea = self.colareas
-        self.colareas = area
-
-    def mouse_event_erase(self, event):
-        if event.inaxes is None or self.disableerasing:
-            return  # Ignore mouse events outside the axes
-        color = self.image[int(event.ydata), int(event.xdata)]
-
-        dummyimage = self.image.copy()
-        dummyimage[self.image == float(color)] = 0
-        dummyimage[self.image > float(color)] -= 1
-        a = self.colareas.copy()
-        p = self.colpositions.copy()
-        if not color > len(self.colareas):
-            del a[int(color)-1]
-            del p[int(color)-1]
-            self.updatedata(a, p)
-
-        self.updateimage(dummyimage)
-
-        plt.imshow(self.image)
-        plt.draw()
-
-    def mouse_event_fill(self, event):
-        print("Set to drawfill mode")
-
-    def mouse_event_pick(self, event):
-        print("Set to pick mode")
-
-    def CLImode(self):
-        self.disabledrawing = True
-        self.disableerasing = True
-        plt.imshow(self.image)
-        self.fig.canvas.mpl_connect('button_press_event', self.mouse_event)
-        plt.draw()
-        print("---Frame: "+str(self.imgindex)+"---")
-        for col in range(1, int(np.max(self.image))+1):
-            print("Label ID: "+str(col))
-            print("Position: "+str(self.colpositions[col-1]))
-
-            print("Area: "+str(self.colareas[col-1]))
-            print('\n')
-        userinput = input(
-            "Enter label(s) to be deleted (separated by commas), or elimination criteria (syntax: a/x/y </> value): ")
-        # make a switch case
-
-        match userinput:
-            # exit if called
-            case userinput if 'xit' in str(userinput):
-                self.updateimage(None)
-                return self.image
-            # assume you have a list of labels
-            case userinput if ',' in str(userinput):
-                labelarray = userinput.split(',')
-                labelarray = [int(el) for el in labelarray]
-                labelarray = list(sorted(labelarray))
-                dummyimage = self.image.copy()
-                for i, el in enumerate(labelarray):
-                    dummyimage[self.image == float(el)] = 0
-                    dummyimage[self.image > float(el)] -= 1
-                    a = self.colareas.copy()
-                    p = self.colpositions.copy()
-                    del a[int(el)-1-i]
-                    del p[int(el)-1-i]
-                self.updatedata(a, p)
-                self.updateimage(dummyimage)
-                self.CLImode()
-                return
-            case userinput if 'a<' in str(userinput) or 'a>' in str(userinput):
-                symbol = userinput[1]
-                limit = float(userinput[2:])
-                if symbol == '>':
-
-                    labelarray = [self.colareas.index(
-                        i)+1 for i in self.colareas if i > limit]
-                    print("labels to delete: "+str(labelarray))
-                elif symbol == '<':
-                    labelarray = [self.colareas.index(
-                        i)+1 for i in self.colareas if i < limit]
-                    print("labels to delete: "+str(labelarray))
-                dummyimage = self.image.copy()
-
-                for i, el in enumerate(labelarray):
-                    dummyimage[self.image == float(el)] = 0
-                    dummyimage[self.image > float(el)] -= 1
-                    a = self.colareas.copy()
-                    p = self.colpositions.copy()
-                    del a[int(el)-1-i]
-                    del p[int(el)-1-i]
-                self.updatedata(a, p)
-                self.updateimage(dummyimage)
-                self.CLImode()
-
-            case userinput if userinput == 'r':
-                self.undo()
-                self.CLImode()
-
-            case userinput if len(userinput) == 1 and int(userinput) == 0:
-
-                return self.image
-
-            case userinput if str(userinput) in ['CLI', 'draw', 'erase', 'fill']:
-                self.mode = userinput
-                if self.mode == 'CLI':
-                    self.CLImode()
-                if self.mode == 'draw':
-                    self.drawmode()
-                if self.mode == 'erase':
-                    self.erasemode()
-
-            case _:
-                try:
-                    dummyimage = self.image.copy()
-                    dummyimage[self.image == float(userinput)] = 0
-                    dummyimage[self.image > float(userinput)] -= 1
-                    self.updateimage(dummyimage)
-                    a = self.colareas.copy()
-                    p = self.colpositions.copy()
-                    del a[int(userinput)-1]
-                    del p[int(userinput)-1]
-                    self.updatedata(a, p)
-                    self.CLImode()
-                except ValueError:
-                    print("Invalid input, restarting sequence")
-                    self.CLImode()
-
-    def mouse_event_draw(self, event):
-        if event.inaxes is None or self.selectedcolor is None or self.disabledrawing:
-            return  # Ignore mouse events outside the axes
-
-        if event.button == 1:  # Left mouse button clicked
-            if not self.drawing:  # Start drawing
-                self.drawing = True
-                # Start new drawing at the click position
-                self.xs = [event.xdata]
-                self.ys = [event.ydata]
-            else:  # Continue drawing while dragging
-                self.xs.append(event.xdata)
-                self.ys.append(event.ydata)
-                self.update_drawing()
-        # Right mouse button clicked (optional, to stop drawing)
-        elif event.button == 3:
-            self.drawing = False
-            print("Stopped drawing")
-
-    def update_drawing(self):
-        if self.drawing:
-            polygonx, polygony = polygon(np.asarray(self.xs).astype(
-                int), np.asarray(self.ys).astype(int))
-
-            # Update the plot with the drawn line
-            dummy = self.image
-
-            dummy[polygony, polygonx] = self.selectedcolor
-
-            self.updateimage(dummy)
-
-           # Redraw the plot to show the updated drawing
-
-    def mouse_event_release(self, event):
-        if self.drawing:  # End drawing when mouse button is released
-            self.drawing = False
-
-            print(f"Finished drawing with points: {len(self.xs)}")
-            plt.imshow(self.image)
-            plt.draw()
-            self.xs = []
-            self.ys = []
-            # You can update the image here based on your drawing (e.g., by adding shapes to the image)
-
-    def toggledrawing(self):
-        self.disabledrawing = not self.disabledrawing
-
-    def toggleerasing(self):
-        self.disableerasing = not self.disableerasing
-
-    def drawmode(self):
-        self.disabledrawing = False
-        self.disableerasing = True
-
-        plt.imshow(self.image)
-        self.fig.canvas.mpl_connect(
-            'button_press_event', self.mouse_event_draw)
-        self.fig.canvas.mpl_connect(
-            'motion_notify_event', self.mouse_event_draw)
-        self.fig.canvas.mpl_connect(
-            'button_release_event', self.mouse_event_release)
-
-        plt.draw()
-        if self.disabledrawing:
-            print("Drawing is disabled.")
-        elif not self.disabledrawing:
-            print("Warning: drawing is enabled.")
-        userinput = input(
-            "Select a color/lw , or press 0 to exit,or p to pause/unpause drawing: ")
-        match userinput:
-            case userinput if str(userinput) in ['CLI', 'draw', 'erase', 'fill']:
-
-                self.mode = userinput
-                if self.mode == 'CLI':
-                    self.CLImode()
-                if self.mode == 'draw':
-                    self.drawmode()
-                if self.mode == 'erase':
-                    self.erasemode()
-            case userinput if userinput == '0':
-                return
-            case userinput if 'xit' in userinput:
-                self.updateimage(None)
-                return
-            case userinput if userinput == 'p':
-                self.toggledrawing()
-                self.drawmode()
-            case userinput if ',' in userinput:
-                self.selectedcolor = int(userinput.split(',')[0])
-                self.selectedwidth = int(userinput.split(',')[1])
-                self.drawmode()
-            case userinput if userinput == 'r':
-                self.undo()
-                self.drawmode()
-            case _:
-                print("Invalid input, try again")
-                self.drawmode()
-
-    def erasemode(self):
-        self.disabledrawing = True
-        self.disableerasing = False
-        plt.imshow(self.image)
-        self.fig.canvas.mpl_connect(
-            'button_press_event', self.mouse_event_erase)
-
-        plt.draw()
-        if self.disableerasing:
-            print("Erasing is disabled.")
-        elif not self.disableerasing:
-            print("Warning: Erasing is enabled.")
-        userinput = input("Press 0 to exit,or p to pause/unpause erasing: ")
-        match userinput:
-            case userinput if str(userinput) in ['CLI', 'draw', 'erase', 'fill']:
-                self.mode = userinput
-                if self.mode == 'CLI':
-                    self.CLImode()
-                if self.mode == 'draw':
-                    self.drawmode()
-                if self.mode == 'erase':
-                    self.erasemode()
-            case userinput if userinput == '0':
-                return
-            case userinput if 'xit' in userinput:
-                self.image = None
-                return
-            case userinput if userinput == 'p':
-                self.toggleerasing()
-                self.erasemode()
-            case userinput if userinput == 'r':
-                self.undo()
-                self.erasemode()
-            case _:
-                print("Invalid input, try again")
-                self.erasemodel()
-
-    def main(self):
-        print("Image type is "+str(type(self.image)))
-        if not isinstance(self.image, np.ndarray):
-            print("returning none in main")
-            return None
-
-        self.CLImode()
-
-        return self.image
-
-
-def printimgswithdata2(imagestack, framelist):
-    newimagestack = []
-    for index, i in enumerate(imagestack):
-        framedata = framelist[index]
-        comlist = [framedata['COMs'][el] for el in framedata['COMs'].keys()]
-        arealist = [framedata['areas'][el] for el in framedata['areas'].keys()]
-        print(type(i))
-        try:
-            print(f"Creating basicplot object for index {index}")
-            plot = basicplot(i, comlist, arealist, index)
-            newi = plot.main()
-        except Exception as e:
-            print(f"Error while creating basicplot for index {index}: {e}")
-
-        if newi is None:
-            dif = len(imagestack)-len(newimagestack)
-            newimagestack += imagestack[dif:]
-            break
-        newimagestack.append(newi)
-    return newimagestack
-
-
-# Conditions to satisfy for tracking:
-    # 1. non-zero overlap
-    # 2. at least 20% of area (considering top 4 candidates)
-    # 3. closeness
-    # 4. ellipse angle ratio
-    # 5. Ellipse major ratio
-# Construct evaluate_candidates function:
-    # check top 4 most overlap
-    # check area ratio
-    # Check angle ratio
-    # Create cost function: has to be more than 2 out of 4
-    # choose top 2 candidates
-def checkifunder(array, name):
-    if np.any(array > 1):
-        print("Problem in "+str(name)+"!")
-        print("Found value((s) "+str(np.where(array > 1)) +
-              " at positions "+str(np.argwhere(array > 1)))
 
 
 def evaluatecandidates(distancetoothers, overlaps, anglestoothers, areatoothers, arstoothers, name, frame, minoverlap=0.10, th=0, weights=[1, 1, 1, 1, 1]):
@@ -603,60 +226,6 @@ def evaluatecandidates(distancetoothers, overlaps, anglestoothers, areatoothers,
     return node
 
 
-
-
-def filterbyoverlap(image, overlapdict, plotflag=False):
-
-    eliminatedlabels = []
-    for k in overlapdict.keys():
-
-        if isinstance(overlapdict[k], np.ndarray):
-            if np.sum(overlapdict[k][1, :]) < 0.5:
-                eliminatedlabels.append(k)
-        else:
-            eliminatedlabels.append(k)
-    duplicate = image.copy()
-    for no in eliminatedlabels:
-        duplicate[duplicate == float(no)] = 0
-    duplicate = np.reshape(duplicate, np.shape(image))
-    if plotflag == True:
-        fig, ax = plt.subplots(3)
-        ax[0].imshow(image)
-        ax[1].imshow(duplicate)
-        ax[2].imshow(image-duplicate)
-        plt.show(block=False)
-    return duplicate
-
-
-def getgoodnodes(nodelist, startingnodes=None):
-    nodes = nodelist.copy()
-    if startingnodes is None:
-        goodnodes = [n.name for n in nodes[0]]
-    else:
-        goodnodes = startingnodes
-    newnodes = []
-    for f in nodes:
-        copy = [n for n in f if n.name in goodnodes]
-        goodnodes = []
-        for n in copy:
-            goodnodes += n.children.keys()
-
-        newnodes.append(copy)
-    return newnodes
-
-
-def filterimagebynodes(imagestack, nodelist):
-    imstack = []
-    for i in range(len(imagestack)):
-        img = imagestack[i].copy()
-        values = np.arange(1, np.max(img)+1)
-        allowed = [n.name for n in nodelist[i]]
-        forbidden = [el for el in values if el not in allowed]
-
-        for c in forbidden:
-            img[img == c] = 0
-        imstack.append(img)
-
     return imstack
 
 def stabilize_images(labels,DCs,ACs = None):
@@ -670,33 +239,7 @@ def stabilize_images(labels,DCs,ACs = None):
     else:
         return stable_labels,stable_DCs
     
-def main():
-    # keys for framedata: position = 0;area = 1;angle = 2;ar = 3;overlap = 4
-    path = '/Users/victorionescu/Desktop/Tracker test'
-    filenames = [path+"/"+f for f in listdir(path) if f != ".DS_Store"]
-    sorted_filenames = sorted(filenames, key=lambda x: int(x[-8:-4]))
-    imgs = [cv2.imread(f, -1) for f in sorted_filenames[:]]
-    print(len(imgs))
-    warpstack = create_warp_stack(imgs)
 
-    processedimgs = apply_warping_fullview(imgs, warpstack)
-
-    processedimgs = remaplabels(processedimgs)
-
-    # f = filterframe(processedimgs[0].copy())
-    stackdata, dist = multiprocessframes(processedimgs)
-
-    tracklist = []
-    stackdata.append(stackdata[-1])
-    for i in range(len(dist)):
-        tracklist.append(evaluateframe(
-            processedimgs[i], stackdata[i], stackdata[i+1], dist[i], i))
-    stackdata = stackdata[:-1]
-    newnodes = tracklist.copy()
-
-    nuimg = filterimagebynodes(processedimgs[:-1], newnodes)
-    network = imagenetwork(processedimgs, tracklist, stackdata)
-    return stackdata, dist, tracklist, newnodes, network
 
     
 def obtain_network(imgs, scorethreshold=0.5):
@@ -862,7 +405,10 @@ def ratiomatrix(array1, array2):
     matrix = np.empty((len(array1), len(array2)))
 
     for i in range(len(array1)):
-        matrix[i, :] = array2/array1[i]
+        if array1[i] ==0:
+            matrix[i, :] = 0
+        else:
+            matrix[i, :] = array2/array1[i]
 
     matrix = matrix.flatten()
 
@@ -1019,7 +565,7 @@ class imagenetwork:
                 node.angle = datas[2][i]
                 node.overlaps = datas[4][i]
                 node.major = datas[5][i]
-                node.minor = datas[5][i]/datas[3][i]
+                node.minor = datas[5][i]/datas[3][i] if datas[3][i] != 0 else 0
         copy = []
         for nlist in nodes:
             copy += nlist
@@ -1289,10 +835,4 @@ class imagenetwork:
                 removal_list.append([n.frame,n.name])
         return removal_list
     
-if __name__ == '__main__':
-    x, d, t, n, net = main()
 
-    counter = 0
-    for node in net.nodes:
-        if len(node.likelyparent) > 1:
-            counter += 1

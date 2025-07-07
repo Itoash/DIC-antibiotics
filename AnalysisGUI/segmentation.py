@@ -5,6 +5,7 @@ from copy import deepcopy
 pg.setConfigOption('imageAxisOrder', 'row-major')
 
 class SegmentWindow(QtWidgets.QMainWindow):
+    window_closed = QtCore.pyqtSignal()
     def __init__(self, segBuffer,analysisBuffer):  # always have to init with an image
         super().__init__()
         self.segBuffer = segBuffer
@@ -50,7 +51,9 @@ class SegmentWindow(QtWidgets.QMainWindow):
         self.showMaximized()
         self.DCplot.autoRange()
         self.Segplot.autoRange()
-        
+    def closeEvent(self, event):
+        self.window_closed.emit()
+        event.accept()
     def deleteImage(self):
         """Delete the current image and associated data."""
         currentIdx = self.DCplot.currentIndex
