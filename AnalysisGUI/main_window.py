@@ -17,66 +17,75 @@ import sif_parser as sp
 pg.setConfigOption('imageAxisOrder', 'row-major')
 pg.setConfigOption('background', 'k')
 
-
-
-
-
 class MainWindow(QtWidgets.QMainWindow):
+    """
+    Main application window for the AC analysis GUI.
+
+    This class manages the main interface, including loading, processing,
+    and displaying image data, as well as segmentation and tracking subwindows.
+    """
+
     def __init__(self):
+        """
+        Initialize the main window and its components.
+        """
         super().__init__()
-        # make image holder with random data right away;
-        # this calls an analysis on startup but it's fine
+        # Initialize image holder with random data
         self.imageData = ImageHolder(self,
                                      np.asarray([np.random.uniform(0, 1, (300, 300))
                                                  for i in range(400)]))
-        # make buffer for seg images
+        # Initialize buffers for segmentation and analysis
         self.segBuffer = SegmentationBuffer()
         self.analysisImages = AnalysisBuffer(self.segBuffer)
-        # make a dock area that auto-inits the predetermined plots
+        # Create dock area for plots and widgets
         self.docks = AnalysisArea(self)
         self.segmentor = None
         self.tracker = None
-        
-        
+
         self.setCentralWidget(self.docks)
 
-        # update all plots, create menus and set a title
+        # Update plots, create menus, and set window title
         self.updateAnalysis()
         self.createActions()
         self.createMenu()
         self.setWindowTitle('Analiza AC')
 
     def updateAnalysis(self):
-        # if there is data, post it to all panels;
-        # all panels have acces to imageHolder and pull
-        # from there on update
+        """
+        Update all plots with the current image data.
+        """
         if self.imageData:
             self.docks.wDIC.update()
             self.docks.wDC.update()
             self.docks.wAC.update()
-            # updateSignals is unique in that it also includes
-            # a masking function for ROI interaction;
-            # the rest just display whatever is in their slot
-            # in the ImageHolder
             self.docks.wSig.updateSignals()
 
     def resetAnalysis(self):
-        # Reset image data, and then update plots
+        """
+        Reset the image data and update plots.
+        """
         self.imageData.reset()
         self.updateAnalysis()
 
     def open(self):
-        # to fix, but obsolete now we have the file tree
+        """
+        Open a directory containing image data.
+        """
         fileName = QtWidgets.QFileDialog.getExistingDirectory(self,
                                                               "Open File",
                                                               QtCore.QDir.currentPath())
-        # fileName, _ = QFileDialog.getOpenFileName(self, 'QFileDialog.getOpenFileName()', '','Images (*.png *.jpeg *.jpg *.bmp *.gif)', options=options)
-
         if fileName:
             self.loadstack(fileName)
 
-    def loadspool(self, filename = None):
-         # get elected directory and run through some checks:
+    def loadspool(self, filename=None):
+        """
+        Load spooled data from a directory.
+
+        Parameters:
+        filename : str, optional
+            Path to the directory containing spooled data.
+        """
+        # get elected directory and run through some checks:
         if filename is None or filename is False:
             index = self.docks.treeview.currentIndex()
             filename = self.docks.treeview.model.filePath(index)
@@ -127,6 +136,13 @@ class MainWindow(QtWidgets.QMainWindow):
         
 
     def loadstack(self, filename=None):
+        """
+        Load a stack of images from a directory.
+
+        Parameters:
+        filename : str, optional
+            Path to the directory containing image stack.
+        """
         # get elected directory and run through some checks:
         if filename is None or filename is False:
             index = self.docks.treeview.currentIndex()
@@ -212,6 +228,9 @@ class MainWindow(QtWidgets.QMainWindow):
         self.updateAnalysis()  # update Plots
 
     def segment(self):
+        """
+        Open the segmentation window.
+        """
         if len(self.segBuffer.images) == 0:
             msg = QtWidgets.QMessageBox()
             msg.setIcon(QtWidgets.QMessageBox.Critical)
@@ -233,6 +252,9 @@ class MainWindow(QtWidgets.QMainWindow):
         self.segmentor.show()
 
     def track(self):
+        """
+        Open the tracking window.
+        """
         if len(self.segBuffer.images) == 0:
             msg = QtWidgets.QMessageBox()
             msg.setIcon(QtWidgets.QMessageBox.Critical)
@@ -256,15 +278,30 @@ class MainWindow(QtWidgets.QMainWindow):
         self.tracker.show()
 
     def tracker_closed(self):
+        """
+        Handle the closure of the tracker window.
+        """
         self.tracker = None
+
     def segmentor_closed(self):
+        """
+        Handle the closure of the segmentor window.
+        """
         self.segmentor = None
+
     def save(self):
+        """
+        Save the current image data to a file.
+        """
         # save the current image to a file
         filename = QtWidgets.QFileDialog.getExistingDirectory(self, "Save Cell data" )
         if filename and 'tracker' in self.__dict__.keys() and self.tracker is not None:
             self.tracker.saveCells(filename)
+
     def addImages(self):
+        """
+        Add images to the segmentation buffer.
+        """
         options = QtWidgets.QFileDialog.Options()
         filename = QtWidgets.QFileDialog.getExistingDirectory(
             self, "Open File", QtCore.QDir.homePath(), options=options)
@@ -308,6 +345,9 @@ class MainWindow(QtWidgets.QMainWindow):
             
 
     def loadSpoolFolder(self):
+        """
+        Load a folder containing spooled data.
+        """
         # get elected directory and run through some checks:
         index = self.docks.treeview.currentIndex()
         filename = self.docks.treeview.model.filePath(index)
@@ -389,6 +429,9 @@ class MainWindow(QtWidgets.QMainWindow):
 
 
     def loadDay(self):
+        """
+        Load a folder containing image stacks for a day.
+        """
         index = self.docks.treeview.currentIndex()
         filename = self.docks.treeview.model.filePath(index)
         if not os.path.isdir(filename):
@@ -449,6 +492,13 @@ class MainWindow(QtWidgets.QMainWindow):
         print(f"Segmentation and processing took {toc}:3fs")
 
     def show_parameter_dialog(self):
+        """
+        Show a dialog to select parameters for loading data.
+
+        Returns:
+        tuple : (int, int)
+            Number of locations and starting index.
+        """
         # Create a custom dialog to get number of locations and starting index
         dialog = QtWidgets.QDialog(self)
         dialog.setWindowTitle("Select Parameters")
@@ -497,8 +547,17 @@ class MainWindow(QtWidgets.QMainWindow):
             # User cancelled
             print("Dialog cancelled")
             return None, None
-    def addImage(self, img=None,resort = True):
 
+    def addImage(self, img=None, resort=True):
+        """
+        Add a single image to the segmentation buffer.
+
+        Parameters:
+        img : np.ndarray, optional
+            Image data to add.
+        resort : bool, optional
+            Whether to resort the buffer after adding (default is True).
+        """
         DC = self.imageData.DC
         AC = self.imageData.AC
         name = self.imageData.codename
@@ -511,15 +570,24 @@ class MainWindow(QtWidgets.QMainWindow):
             f'Analysis buff: ACs/DCs{len(self.analysisImages.ACs),len(self.analysisImages.DCs)}')
     
     def clearBuffer(self):
+        """
+        Clear the segmentation and analysis buffers.
+        """
         self.segBuffer.clear()
         self.analysisImages.clear()
 
     def about(self):
+        """
+        Show an "About" dialog.
+        """
         # whatever this is
         QtWidgets.QMessageBox.about(self, "About Image Viewer",
                                     "<p>The <b>DIC Analyzer</b> works fine don't worry about it...</p>")
 
     def createActions(self):
+        """
+        Create actions and shortcuts for top-level commands.
+        """
         # make actions and shortcuts for important top-level commands
         self.openAct = QtWidgets.QAction(
             "&Open...", self, shortcut="Ctrl+O", triggered=self.open)
@@ -553,15 +621,21 @@ class MainWindow(QtWidgets.QMainWindow):
             "Start tracking with seg. buffer", self, shortcut="Ctrl+K", triggered=self.track)
 
     def closeApp(self):
-        if 'segmentor' in self.__dict__.keys():
+        """
+        Close the application and clean up resources.
+        """
+        if self.segmentor is not None:
             self.segmentor.close()
-        if 'tracker' in self.__dict__.keys():
+        if self.tracker is not None:
             self.tracker.close()
         import gc
         gc.collect()
         self.close()
 
     def createMenu(self):
+        """
+        Create the menu bar and add commands.
+        """
         # display commands in menubar
         self.fileMenu = QtWidgets.QMenu("&File", self)
         self.fileMenu.addAction(self.openAct)
@@ -590,13 +664,29 @@ class MainWindow(QtWidgets.QMainWindow):
     # this is herer to limit access between plots; called by images when ROI is open
     # to update signal plots
     def updateSignals(self, mask):
-        self.docks.wSig.updateSignals(mask)
+        """
+        Update signal plots with the given mask.
 
+        Parameters:
+        mask : np.ndarray
+            Mask for signal processing.
+        """
+        self.docks.wSig.updateSignals(mask)
 
 # holds docks; can be removed and incorporated into mainwindow, but it's fine for now
 class AnalysisArea(DockArea):
-    # Do not change this init; the layout is very finnicky and took a while to setup
+    """
+    Dock area for managing plots and widgets.
+    """
+
     def __init__(self, parent):
+        """
+        Initialize the dock area with predefined layout.
+
+        Parameters:
+        parent : object
+            Reference to the parent object.
+        """
         super().__init__()
         self.parent = parent
         self.fileExplorerDock = Dock("File Explorer", size=(100, 100))

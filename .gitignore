@@ -25,6 +25,9 @@ Cargo.lock
 
 # Installer logs
 *.log
+*.pdf
+draft*
+
 
 # Virtual environments
 venv/
