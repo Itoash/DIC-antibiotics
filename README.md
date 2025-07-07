@@ -12,7 +12,18 @@ This app is meant to provide a user interface for the processing and obtaining s
 
 ### Signal analysis
 In an electro-optical measurement stack, each spatial location has its associated time series, which mirrors the AC signal applied during acquisition (provided the field is strong enough, and there are refractive interfaces to be found in the focus plane). Using traditional signal processing methods to clean up the signal and extract the **amplitude** of the desired frequency from the signal, the app then provides an "Amplitude image" to the user, indicating where the oscillations were strongest. 
-An experiment will ususally study the progression of the electrical properties of these interfaces over time, usualy under the effect of some external stimuli. This means that a large number of images (measurements of +/- 400 frames, over however many measurements are obtained) need to be processed in a reasonable time. This is where the highly-efficient parallel signal processing comes in (details later). 
+An experiment will ususally study the progression of the electrical properties of these interfaces over time, usualy under the effect of some external stimuli. This means that a large number of images (measurements of +/- 400 frames, over however many measurements are ob### Signal Analysis
+
+In an electro-optical measurement stack, each spatial location has its associated time series, mirroring the AC signal applied during acquisition. The app uses signal processing methods to clean up the signal and extract the **amplitude** of the desired frequency, providing an "Amplitude image" to indicate where oscillations were strongest.
+
+#### Key Features:
+- **Parallel Signal Processing:** Efficiently processes large image stacks (~400 frames per measurement).
+- **Amplitude Image:** Highlights regions with the strongest oscillations.
+
+#### Workflow:
+1. Apply signal processing methods.
+2. Extract amplitude of the desired frequency.
+3. Generate amplitude images for analysis.tained) need to be processed in a reasonable time. This is where the highly-efficient parallel signal processing comes in (details later). 
 
 ### Segmentation
 Using a pre-existing model (Omnipose, cite here), tuned to DIC images when necessary, the program performs segmentations on the (time-averaged) image stack, obtaining cell masks with great accuracy, especially considering the quality of the images used; DIC microscopy doesn't show a great difference in intensity on objects in focus. The segmentation model is pre-trained with a large number of phase-contrast images, but adapting some of its parameters allows it to make decently accurate predictions on DIC images as well, provided the cells have some contrast from the background.
