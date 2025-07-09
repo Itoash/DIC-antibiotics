@@ -6,7 +6,7 @@ import cv2
 import time as tm
 from AnalysisGUI.cell_viewer import CellViewer
 from AnalysisGUI.timeseries_viewer import DataVisualizerApp
-from AnalysisGUI.utils.TrackerModule import obtain_network, stabilize_images
+from AnalysisGUI.utils.TrackerModule import obtain_network, stabilize_images, apply_warping_fullview, create_warp_stack
 from AnalysisGUI.utils.cellprocessor import process_cells
 from AnalysisGUI.widgets import OverlayImage, Graph
 
@@ -43,10 +43,9 @@ class TrackWindow(QtWidgets.QMainWindow):
         self.highlight = None  # For highlighting selected cells
         self.time_vis = None
         self.cell_vis = None
-        # Stabilize images if requested
-        if stabilize:
-            self._stabilize_images()
-            
+        self.stabilized_masks = None # For storing masks if stabilization is used
+        self.warpstack = None  # For storing warping matrices if stabilization is used
+
         # Set up the main UI components
         self._setup_ui()
         
@@ -70,28 +69,44 @@ class TrackWindow(QtWidgets.QMainWindow):
         """Stabilize images to reduce movement between frames."""
         if len(self.segBuffer.images) == len(self.analysisBuffer.ACs):
             print(f"Analysis buffer is in sync with segBuffer: {len(self.segBuffer.images)}")
-            newDC, segs, newAC = stabilize_images(
-                self.segBuffer.images, self.segBuffer.masks, self.analysisBuffer.ACs)
-            segs = [s.astype(int) for s in segs]
             
-            self.segBuffer.masks = segs
-            for DC in newDC:
-                minval = np.mean(DC[DC.astype(float) != float(0)])
-                DC[DC.astype(float) == float(0)] = minval
-            self.segBuffer.images = newDC
-            self.analysisBuffer.DCs = deepcopy(newDC)
-            self.analysisBuffer.ACs = newAC
-        else:  # segBuffer and analysisBuffer are not synced
-            print(f"Analysis buffer is NOT in sync with segBuffer: {len(self.analysisBuffer.ACs),len(self.segBuffer.images)}")
-            newDC, segs = stabilize_images(
-                self.segBuffer.images, self.segBuffer.masks)
+            # Compute warping matrices
+            self.warpstack = create_warp_stack(self.segBuffer.images)
             
-            segs = [s.astype(int) for s in segs]
-            self.segBuffer.masks = segs
-            for DC in newDC:
-                minval = np.mean(DC[DC.astype(float) != float(0)])
-                DC[DC.astype(float) == float(0)] = minval
-            self.segBuffer.images = newDC
+            # Apply warping to create stabilized images and masks
+            self.stabilized_images = apply_warping_fullview(self.segBuffer.images, self.warpstack)
+            self.stabilized_masks = apply_warping_fullview(self.segBuffer.masks, self.warpstack)
+            
+            # Update the plots with stabilized data
+            self.DCplot.setImage(np.asarray(self.stabilized_images), axes={
+                't': 0, 'x': 2, 'y': 1, 'c': None})
+            print(f'DC min: {np.min(np.asarray(self.stabilized_images))}')
+            self.DCplot.setOverlay(np.asarray(self.stabilized_masks))
+            
+            
+            # Create network from stabilized masks
+            self.imagenet = obtain_network(self.stabilized_masks.copy())
+            
+            # Handle error case where network creation fails
+            if isinstance(self.imagenet, int):
+                idx = self.imagenet
+                msg = QtWidgets.QMessageBox()
+                msg.setIcon(QtWidgets.QMessageBox.Critical)
+                msg.setText(
+                    f"Empty segmentation image contained at index {idx} in file {self.analysisBuffer.names[idx]}")
+                msg.setInformativeText(
+                    "Retry tracking with valid segmentations!")
+                msg.setWindowTitle("TypeError")
+                msg.exec_()
+                self.close()
+                return
+            
+            # Update the graph visualization
+            graphnodes, graphedges, text, meta = self.imagenet.exportGraph()
+            self.Graph.setData(pos=graphnodes, adj=graphedges,
+                               text=text, size=15, meta=meta)
+        else:
+            print(f"Analysis buffer is NOT in sync with segBuffer: {len(self.analysisBuffer.ACs)}, {len(self.segBuffer.images)}")
 
     def _setup_ui(self):
         """Set up the main UI components and layout."""
@@ -188,11 +203,11 @@ class TrackWindow(QtWidgets.QMainWindow):
         self.remakeNet.triggered.connect(self.recomputeNet)
         self.toolbar.addAction(self.remakeNet)
         
-        self.deleteImg = QtWidgets.QAction("Delete current image", self)
+        self.deleteImg = QtWidgets.QAction("Delete current image (permanent)", self)
         self.deleteImg.triggered.connect(self.deleteImage)
         self.toolbar.addAction(self.deleteImg)
         
-        self.stabilizeImages = QtWidgets.QAction("Stabilize image stack (permanent)", self)
+        self.stabilizeImages = QtWidgets.QAction("Stabilize image stack", self)
         self.stabilizeImages.triggered.connect(self._stabilize_images)
         self.toolbar.addAction(self.stabilizeImages)
         # Visualization tools
@@ -386,7 +401,7 @@ class TrackWindow(QtWidgets.QMainWindow):
         currentIdx = self.DCplot.currentIndex
         self.switchoffHighlight(0)
         self.Graph.selectedIndices = None
-        overlays = self.DCplot.overlay
+        overlays = np.asarray(self.stabilized_masks) if self.warpstack is not None else self.DCplot.overlay
         remove_list = self.imagenet.filterByLineage(
                     nodename)
         tic = tm.time()
@@ -402,8 +417,8 @@ class TrackWindow(QtWidgets.QMainWindow):
             self.DCplot.rescaleLabels()
         
         # Update display and network
-        
-        self.DCplot.setImage(np.asarray(self.segBuffer.images), axes={
+        imgs = self.segBuffer.images if self.warpstack is None else self.stabilized_images
+        self.DCplot.setImage(np.asarray(imgs), axes={
                              't': 0, 'x': 2, 'y': 1, 'c': None})
         self.DCplot.setOverlay(overlays)
         self.DCplot.updateImage()
@@ -415,7 +430,7 @@ class TrackWindow(QtWidgets.QMainWindow):
         self.Graph.setData(pos=graphnodes, adj=graphedges,
                         text=text, size=15, meta=meta)
         self.switchoffHighlight(0)
-        
+        self.stabilized_masks = overlays if self.warpstack is not None else None
 
     def rescaledLabels(self, oldlabels, newlabels, currIdx):
         """Update the network after rescaling labels."""
@@ -430,7 +445,10 @@ class TrackWindow(QtWidgets.QMainWindow):
     def recomputeNet(self):
         """Recompute the cell network from current overlay images."""
         imgs = self.DCplot.overlay
-        imgs = [imgs[i, :, :] for i in range(imgs.shape[0])]
+        if self.warpstack is not None:
+            imgs = self.stabilized_masks.copy()
+        else:
+            imgs = [imgs[i, :, :] for i in range(imgs.shape[0])]
         
         # Create new network
         self.imagenet = obtain_network(imgs)
@@ -443,7 +461,7 @@ class TrackWindow(QtWidgets.QMainWindow):
     def filterNodes(self):
         """Filter cells based on selected criteria."""
         currentIdx = self.DCplot.currentIndex
-        overlays = self.DCplot.overlay
+        overlays = np.asarray(self.stabilized_masks) if self.warpstack is not None else self.DCplot.overlay
         choice = self.combobox.currentIndex()
         
         # Apply filter based on selected criteria
@@ -473,7 +491,8 @@ class TrackWindow(QtWidgets.QMainWindow):
         
         # Update display and network
         self.DCplot.setCurrentIndex(0)
-        self.DCplot.setImage(np.asarray(self.segBuffer.images), axes={
+        imgs = self.segBuffer.images if self.warpstack is None else self.stabilized_images
+        self.DCplot.setImage(np.asarray(imgs), axes={
                              't': 0, 'x': 2, 'y': 1, 'c': None})
         self.DCplot.setOverlay(overlays)
         self.DCplot.updateImage()
@@ -485,7 +504,7 @@ class TrackWindow(QtWidgets.QMainWindow):
         self.Graph.setData(pos=graphnodes, adj=graphedges,
                         text=text, size=15, meta=meta)
         self.switchoffHighlight(0)
-
+        self.stabilized_masks = overlays if self.warpstack is not None else None
     #############################
     # Image Management Methods  #
     #############################
@@ -511,10 +530,19 @@ class TrackWindow(QtWidgets.QMainWindow):
     
     def checkpoint(self):
         """Save current state to segBuffer."""
-        imgs = self.DCplot.overlay
-        imgs = [imgs[i, :, :] for i in range(imgs.shape[0])]
+        imgs = [self.DCplot.overlay[i, :, :] for i in range(self.DCplot.overlay.shape[0])] if self.warpstack is None else self.stabilized_masks
+        
         self.segBuffer.masks = deepcopy(imgs)
         self.segBuffer.imagenet = deepcopy(self.imagenet)
+        if self.warpstack is not None:
+            
+            self.segBuffer.images = apply_warping_fullview(
+                self.segBuffer.images, self.warpstack)
+            self.analysisBuffer.DCs = apply_warping_fullview(
+                self.analysisBuffer.DCs, self.warpstack)
+            self.analysisBuffer.ACs = apply_warping_fullview(
+                self.analysisBuffer.ACs, self.warpstack)
+            self.warpstack = None  # Clear warpstack after checkpointing
     
     def deleteImage(self):
         """Delete the current image and associated data."""
@@ -539,6 +567,7 @@ class TrackWindow(QtWidgets.QMainWindow):
         # Update the network and images
         self.resetImages()
         self.recomputeNet()
+        self.segBuffer.imagenet = deepcopy(self.imagenet)
         self.switchoffHighlight(0)
 
     #########################

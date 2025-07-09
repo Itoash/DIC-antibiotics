@@ -125,7 +125,7 @@ def apply_warping_fullview(images, warp_stack=None, PATH=None):
     # Create padded first image with non-zero dimensions
     padded_height = max(1, images[0].shape[0] + top + bottom)
     padded_width = max(1, images[0].shape[1] + left + right)
-    image_0 = np.zeros((padded_height, padded_width))
+    image_0 = np.full((padded_height, padded_width),np.mean(images[0]), dtype=images[0].dtype)
     
     # Careful slicing to avoid empty dimensions
     bottom_slice = None if bottom == 0 else -bottom
@@ -157,7 +157,7 @@ def apply_warping_fullview(images, warp_stack=None, PATH=None):
             except StopIteration:
                 print(f"Warning: Not enough homography matrices for image {i+1}")
                 # Just add the original image with padding
-                padded_img = np.zeros((images[0].shape[0]+top+bottom, images[0].shape[1]+left+right))
+                padded_img = np.full((images[0].shape[0]+top+bottom, images[0].shape[1]+left+right),np.mean(images[0]), dtype=images[0].dtype)
                 padded_img[top:top+img.shape[0], left:left+img.shape[1]] = img
                 imgs.append(padded_img)
     except Exception as e:
@@ -229,7 +229,7 @@ def evaluatecandidates(distancetoothers, overlaps, anglestoothers, areatoothers,
     return imstack
 
 def stabilize_images(labels,DCs,ACs = None):
-    warp_stack = create_warp_stack(labels)
+    warp_stack = create_warp_stack(DCs)
     stable_labels = apply_warping_fullview(labels, warp_stack)
     
     stable_DCs = apply_warping_fullview(DCs, warp_stack)
@@ -245,7 +245,7 @@ def stabilize_images(labels,DCs,ACs = None):
 def obtain_network(imgs, scorethreshold=0.5):
     # imgs: list of 2D numpy arrays as images
     # scorethreshold: double to set in imagenetwork class
-    processedimgs = imgs.copy()
+    processedimgs = imgs
     for idx,i in enumerate(processedimgs):
         if not np.any(i):
             return idx

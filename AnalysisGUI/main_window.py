@@ -414,17 +414,24 @@ class MainWindow(QtWidgets.QMainWindow):
         #     self.segmentor.close()
         # if 'tracker' in self.__dict__.keys():
         #     self.tracker.close()
-        tic = tm.time()
-        for i in range(start_index, len(spoolfiles), num_locations):
+        total = len(range(start_index, len(spoolfiles), num_locations))
+        progress = QtWidgets.QProgressDialog("Loading spools...", "Cancel", 0, total, self)
+        progress.setWindowModality(QtCore.Qt.WindowModal)
+        progress.setMinimumDuration(0)
+        progress.setValue(0)
+        for idx, i in enumerate(range(start_index, len(spoolfiles), num_locations)):
             if os.path.isdir(os.path.join(filename,spoolfiles[i])):
-                # load images from directory
                 self.loadspool(os.path.join(filename,spoolfiles[i]))
                 self.addImage(resort=False)
             else:
-                # something happened to directory during segmentation
                 print(f"Skipping {spoolfiles[i]} as it is not a directory")
                 continue
+            progress.setValue(idx+1)
+            QtWidgets.QApplication.processEvents()
+            if progress.wasCanceled():
+                break
         self.analysisImages.sortByAbsTime()
+        progress.close()
 
 
 
@@ -478,18 +485,26 @@ class MainWindow(QtWidgets.QMainWindow):
         #     self.segmentor.close()
         # if 'tracker' in self.__dict__.keys():
         #     self.tracker.close()
+        total = len(range(start_index, len(files), num_locations))
+        progress = QtWidgets.QProgressDialog("Loading image stacks...", "Cancel", 0, total, self)
+        progress.setWindowModality(QtCore.Qt.WindowModal)
+        progress.setMinimumDuration(0)
+        progress.setValue(0)
         tic = tm.time()
-        for i in range(start_index, len(files), num_locations):
+        for idx, i in enumerate(range(start_index, len(files), num_locations)):
             if os.path.isdir(files[i]):
-                # load images from directory
                 self.loadstack(files[i])
                 self.addImage(resort=False)
             else:
-                # something happened to directory during segmentation
                 print(f"Skipping {files[i]} as it is not a directory")
                 continue
+            progress.setValue(idx+1)
+            QtWidgets.QApplication.processEvents()
+            if progress.wasCanceled():
+                break
         toc = tm.time()-tic
         print(f"Segmentation and processing took {toc}:3fs")
+        progress.close()
 
     def show_parameter_dialog(self):
         """
