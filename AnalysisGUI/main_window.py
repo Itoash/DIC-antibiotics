@@ -2,7 +2,7 @@ import numpy as np
 import pyqtgraph as pg
 from pyqtgraph.dockarea.Dock import Dock
 from pyqtgraph.dockarea.DockArea import DockArea
-from pyqtgraph.Qt import QtWidgets, QtCore
+from pyqtgraph.Qt import QtWidgets, QtCore, QtGui
 from copy import deepcopy
 from AnalysisGUI.cell_viewer import CellViewer
 import os
@@ -30,6 +30,8 @@ class MainWindow(QtWidgets.QMainWindow):
         Initialize the main window and its components.
         """
         super().__init__()
+        # Set application window icon
+        self.setWindowIcon(QtGui.QIcon(os.path.join(os.path.dirname(os.path.abspath(__file__)), '../assets/bacteria.ico')))
         # Initialize image holder with random data
         self.imageData = ImageHolder(self,
                                      np.asarray([np.random.uniform(0, 1, (300, 300))
@@ -41,7 +43,22 @@ class MainWindow(QtWidgets.QMainWindow):
         self.docks = AnalysisArea(self)
         self.segmentor = None
         self.tracker = None
-
+        self.segmentation_params =  {
+            'channels': [0, 0],
+            'rescale': None,
+            'mask_threshold': -2,
+            'flow_threshold': 0.99,
+            'transparency': False,
+            'omni': True,
+            'cluster': False,
+            'resample': True,
+            'verbose': False,
+            'tile': True,
+            'niter': None,
+            'augment': True,
+            'affinity_seg': True,
+            'invert': True
+        }
         self.setCentralWidget(self.docks)
 
         # Update plots, create menus, and set window title
@@ -576,7 +593,7 @@ class MainWindow(QtWidgets.QMainWindow):
         DC = self.imageData.DC
         AC = self.imageData.AC
         name = self.imageData.codename
-        self.segBuffer.addImage(DC)
+        self.segBuffer.addImage(DC,self.segmentation_params)
         self.analysisImages.addImage(AC, DC, name,resort=resort)
         print('Added image!')
         print(
@@ -598,6 +615,92 @@ class MainWindow(QtWidgets.QMainWindow):
         # whatever this is
         QtWidgets.QMessageBox.about(self, "About Image Viewer",
                                     "<p>The <b>DIC Analyzer</b> works fine don't worry about it...</p>")
+
+    def showSegmentationSettingsDialog(self):
+        """
+        Show a dialog to edit segmentation parameters.
+        """
+        # Default parameters from seg_utils.pyx
+        default_params = {
+            'channels': [0, 0],
+            'rescale': None,
+            'mask_threshold': -2,
+            'flow_threshold': 0.99,
+            'transparency': False,
+            'omni': True,
+            'cluster': False,
+            'resample': True,
+            'verbose': False,
+            'tile': True,
+            'niter': None,
+            'augment': True,
+            'affinity_seg': True,
+            'invert': True
+        }
+
+        # Use stored params if available
+        params = getattr(self, 'segmentation_params', default_params.copy())
+
+        dialog = QtWidgets.QDialog(self)
+        dialog.setWindowTitle("Segmentation Settings")
+        layout = QtWidgets.QFormLayout(dialog)
+        widgets = {}
+
+        # Helper for bools
+        def bool_widget(val):
+            w = QtWidgets.QCheckBox()
+            w.setChecked(bool(val))
+            return w
+
+        # Helper for lists
+        def list_widget(val):
+            w = QtWidgets.QLineEdit(','.join(str(x) for x in val))
+            return w
+
+        for key, val in params.items():
+            if isinstance(val, bool):
+                w = bool_widget(val)
+            elif isinstance(val, list):
+                w = list_widget(val)
+            elif isinstance(val, (int, float)) or val is None:
+                w = QtWidgets.QLineEdit(str(val) if val is not None else '')
+            else:
+                w = QtWidgets.QLineEdit(str(val))
+            widgets[key] = w
+            layout.addRow(key, w)
+
+        button_box = QtWidgets.QDialogButtonBox(
+            QtWidgets.QDialogButtonBox.Ok | QtWidgets.QDialogButtonBox.Cancel, dialog)
+        layout.addWidget(button_box)
+        button_box.accepted.connect(dialog.accept)
+        button_box.rejected.connect(dialog.reject)
+
+        if dialog.exec_() == QtWidgets.QDialog.Accepted:
+            new_params = {}
+            for key, w in widgets.items():
+                if isinstance(default_params[key], bool):
+                    new_params[key] = w.isChecked()
+                elif isinstance(default_params[key], list):
+                    try:
+                        new_params[key] = [int(x) for x in w.text().split(',') if x.strip() != '']
+                    except Exception:
+                        new_params[key] = [0, 0]
+                elif isinstance(default_params[key], float):
+                    try:
+                        new_params[key] = float(w.text())
+                    except Exception:
+                        new_params[key] = default_params[key]
+                elif isinstance(default_params[key], int):
+                    try:
+                        new_params[key] = int(w.text())
+                    except Exception:
+                        new_params[key] = default_params[key]
+                elif default_params[key] is None:
+                    t = w.text().strip()
+                    new_params[key] = None if t == '' else t
+                else:
+                    new_params[key] = w.text()
+            self.segmentation_params = new_params
 
     def createActions(self):
         """
@@ -634,6 +737,8 @@ class MainWindow(QtWidgets.QMainWindow):
             "Import files into seg. buffer", self, shortcut="Ctrl+I", triggered=self.addImages)
         self.trackAct = QtWidgets.QAction(
             "Start tracking with seg. buffer", self, shortcut="Ctrl+K", triggered=self.track)
+        self.segmentationSettingsAct = QtWidgets.QAction(
+            "Segmentation Settings", self, triggered=self.showSegmentationSettingsDialog)
 
     def closeApp(self):
         """
@@ -669,6 +774,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self.segMenu.addAction(self.startsegAct)
         self.segMenu.addAction(self.clearsegAct)
         self.segMenu.addAction(self.importSeg)
+        self.segMenu.addAction(self.segmentationSettingsAct)
         self.trackMenu = QtWidgets.QMenu("&Tracking", self)
         self.trackMenu.addAction(self.trackAct)
         self.menuBar().addMenu(self.fileMenu)

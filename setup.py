@@ -13,15 +13,7 @@ cython_dir = os.path.join(base_dir, "utils")
 
 
 
-# Use full module names
-ac_extension = Extension(
-    "AnalysisGUI.utils.ac_utils",
-    [ "AnalysisGUI/utils/ac_utils2.pyx"],
-    language="c++",
-    extra_compile_args=["-O3","-ffast-math"],
-    include_dirs=[np.get_include()],
-    define_macros=[("NPY_NO_DEPRECATED_API", "NPY_1_7_API_VERSION")]
-)
+
 
 seg_extension = Extension(
     "AnalysisGUI.utils.seg_utils",
@@ -41,7 +33,7 @@ processor_extension = Extension(
     define_macros=[("NPY_NO_DEPRECATED_API", "NPY_1_7_API_VERSION")]
 )
 
-extensions = [ac_extension, seg_extension,processor_extension]
+extensions = [seg_extension,processor_extension]
 cython_modules = cythonize(extensions, include_path=[cython_dir], compiler_directives = {"language_level":3})
 
 

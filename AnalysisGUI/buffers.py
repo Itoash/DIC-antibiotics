@@ -140,7 +140,7 @@ class SegmentationBuffer:
         self.masks = []
         self.imagenet = None
 
-    def addImage(self, img):
+    def addImage(self, img,params = None):
         """
         Adds a single image and computes its segmentation mask.
 
@@ -165,7 +165,11 @@ class SegmentationBuffer:
                 return
 
         self.images.append(img.astype(np.float64))
-        msk = segmentDComni([img])
+        if params is not None:
+            # If parameters are provided, use them for segmentation
+            msk = segmentDComni([img],params=params)
+        else:
+            msk = segmentDComni([img])
         self.masks.append(msk[0])
 
     def addMultipleImages(self, imgs):
