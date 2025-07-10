@@ -1,3 +1,4 @@
 include Cargo.toml
 recursive-include rust_backend lib.rs
 recursive-include AnalysisGUI/utils *.pyx *.pxd
+recursive include icons

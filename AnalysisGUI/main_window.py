@@ -31,7 +31,7 @@ class MainWindow(QtWidgets.QMainWindow):
         """
         super().__init__()
         # Set application window icon
-        self.setWindowIcon(QtGui.QIcon(os.path.join(os.path.dirname(os.path.abspath(__file__)), '../assets/bacteria.ico')))
+        self.setWindowIcon(QtGui.QIcon(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'bacteria.ico')))
         # Initialize image holder with random data
         self.imageData = ImageHolder(self,
                                      np.asarray([np.random.uniform(0, 1, (300, 300))
