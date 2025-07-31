@@ -1031,27 +1031,38 @@ pub mod ac{
         //Usually means signal drop
         let defaults = vec![start,end];
         let diff: Vec<f32> = (1..n).map(|i| mean_signal[[i]] - mean_signal[i - 1]).collect();
-        let found_outliers:Vec<usize> = diff.iter().enumerate().filter_map(|(i, &x)| if x.abs() > 3f32 * std { Some(i) } else { None }).collect();
-        let mut outliers = Vec::new();
-        outliers.extend(defaults);
-        outliers.extend(found_outliers);
-        outliers.sort();
+        let found_outliers:Vec<usize> = diff.iter().enumerate().filter_map(|(i, &x)| if x.abs() > 2f32 * std { Some(i) } else { None }).collect(); //find indices where outliers are
+        
+        if found_outliers.is_empty() {
+            let start = defaults[0];
+            let end = defaults[1].min(n-1);
+            let nperiods = ((end as f32 - start as f32 + 1.0) * frequency / fs).floor() as usize;
+            return Ok((start, end, nperiods));
+        }
+        else{
+            println!("Found outliers at indices: {:?}", found_outliers);
+            let mut outliers = Vec::new();
+            outliers.extend(defaults); 
+            outliers.extend(found_outliers);
+            outliers.sort();
 
-        // Find max lenght region enclosed by outliers
-        let outlier_diffs:Vec<usize> = (1..outliers.len()).map(|i|outliers[i]-outliers[i-1]).collect();
-        let max_idx = outlier_diffs
-            .iter()
-            .enumerate()
-            .max_by_key(|&(_, value)| value)
-            .map(|(idx, _)| idx).expect("Cannot find max index");
+            // Find max lenght region enclosed by outliers
+            let outlier_diffs:Vec<usize> = (1..outliers.len()).map(|i|outliers[i]-outliers[i-1]).collect();
+            let max_idx = outlier_diffs
+                .iter()
+                .enumerate()
+                .max_by_key(|&(_, value)| value)
+                .map(|(idx, _)| idx).expect("Cannot find max index");
 
-        // Assign start, end 
-        // Compute number of periods
-        let start = outliers[max_idx];
-        let end = outliers[max_idx+1];
-        let nperiods = ((end as f32-start as f32+1.0)*frequency/fs).floor() as usize;
+            // Assign start, end 
+            // Compute number of periods
+            let start =  outliers[max_idx]+1; //+1 to exclude outlier itself
+            let end = outliers[max_idx+1] -1; //-1 to exclude outlier itself
+            let nperiods = ((end as f32-start as f32+1.0)*frequency/fs).floor() as usize;
 
-        Ok((start, end, nperiods))  
+            return Ok((start, end, nperiods));
+        }
+        
 
     }
     use pyo3::prelude::*;

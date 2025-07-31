@@ -307,7 +307,7 @@ cdef list process_label(np.ndarray AC, np.ndarray DC, np.ndarray label, float co
 
 cdef tuple findInterior(np.ndarray[FLOAT64_t, ndim=2] image,
                         np.ndarray[BOOL_t, ndim=2] cell_mask,
-                        float min_area_ratio=0.05,
+                        float min_area_ratio=0.2,
                         float max_area_ratio=1.0):
     """
     Find interior regions within a cell mask using Otsu thresholding.

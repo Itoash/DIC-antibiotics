@@ -75,15 +75,15 @@ class TrackWindow(QtWidgets.QMainWindow):
             
             # Apply warping to create stabilized images and masks
             self.stabilized_images = apply_warping_fullview(self.segBuffer.images, self.warpstack)
-            self.stabilized_masks = apply_warping_fullview(self.segBuffer.masks, self.warpstack)
+            self.stabilized_masks = apply_warping_fullview(self.segBuffer.masks, self.warpstack,pad_with_mean=False)
             
             # Update the plots with stabilized data
-            self.DCplot.setImage(np.asarray(self.stabilized_images), axes={
+            self.DCplot.setImage(np.asarray(self.stabilized_images.copy()), axes={
                 't': 0, 'x': 2, 'y': 1, 'c': None})
             print(f'DC min: {np.min(np.asarray(self.stabilized_images))}')
-            self.DCplot.setOverlay(np.asarray(self.stabilized_masks))
-            
-            
+            self.DCplot.setOverlay(np.asarray(self.stabilized_masks.copy()))
+
+
             # Create network from stabilized masks
             self.imagenet = obtain_network(self.stabilized_masks.copy())
             
@@ -739,3 +739,5 @@ def writeCellDict(cell_data, path):
     print(f'Cell data saved to {fullpath}')
     return fullpath
 
+
+    

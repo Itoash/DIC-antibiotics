@@ -1,7 +1,7 @@
 from pyqtgraph.Qt import QtWidgets
-from AnalysisGUI.utils.seg_utils import segmentDComni
 import numpy as np 
-
+import os
+from cellpose import models
 class AnalysisBuffer:
     """
     Class for long-term storage of DC and AC images, as well as metadata.
@@ -125,6 +125,10 @@ class AnalysisBuffer:
         self.abstimes = []
 
 
+CELL_MODEL_PATH = os.path.join(os.path.expanduser('~'),'analysisgui-cpsam_models','cpsam-DIC')
+BACT_MODEL_PATH = os.path.join(os.path.expanduser('~'),'analysisgui-cpsam_models','cpsam-DIC-bact')
+
+
 class SegmentationBuffer:
     """
     Buffer for storing DC and segmentation image data.
@@ -132,14 +136,43 @@ class SegmentationBuffer:
     Stores images and their corresponding segmentation masks.
     """
 
-    def __init__(self):
+    def __init__(self,eukaryotes=False):
         """
         Initializes the SegmentationBuffer.
         """
         self.images = []
         self.masks = []
         self.imagenet = None
+        if eukaryotes:
+            self.model = models.CellposeModel(gpu=True, pretrained_model=CELL_MODEL_PATH,use_bfloat16=False)
+            self.eukaryotic_mode = True
+        else:
+            self.model = models.CellposeModel(gpu=True, pretrained_model=BACT_MODEL_PATH,use_bfloat16=False)
+            self.eukaryotic_mode = False
 
+    def setModel(self, eukaryotes=False):
+        """
+        Sets the model for segmentation.
+
+        Parameters
+        ----------
+        eukaryotes : bool, optional
+            If True, uses the eukaryotic model; otherwise, uses the bacterial model.
+        
+        Returns
+        -------
+        None
+        """
+        if eukaryotes == self.eukaryotic_mode:
+            # No change needed, model already set correctly
+            return
+        if eukaryotes:
+            self.model = models.CellposeModel(gpu=True, pretrained_model=CELL_MODEL_PATH,use_bfloat16=False)
+            self.eukaryotic_mode = True
+        else:
+            self.model = models.CellposeModel(gpu=True, pretrained_model=BACT_MODEL_PATH,use_bfloat16=False)
+            self.eukaryotic_mode = False
+    
     def addImage(self, img,params = None):
         """
         Adds a single image and computes its segmentation mask.
@@ -167,48 +200,52 @@ class SegmentationBuffer:
         self.images.append(img.astype(np.float64))
         if params is not None:
             # If parameters are provided, use them for segmentation
-            msk = segmentDComni([img],params=params)
+            # Remove eukaryotic_mode from params as it's not a valid argument for model.eval
+            model_params = {k: v for k, v in params.items() if k != 'eukaryotic_mode'}
+            msk,*_ = self.model.eval([img],**model_params)
+
         else:
-            msk = segmentDComni([img])
+            msk,*_ = self.model.eval([img], diameter=None, flow_threshold=0.0, cellprob_threshold=0.0, do_3D=False, niter=None, augment=False)
+
         self.masks.append(msk[0])
 
-    def addMultipleImages(self, imgs):
-        """
-        Adds multiple images and computes their segmentation masks.
+    # def addMultipleImages(self, imgs):
+    #     """
+    #     Adds multiple images and computes their segmentation masks.
 
-        Parameters
-        ----------
-        imgs : list of np.ndarray
-            List of images to add.
+    #     Parameters
+    #     ----------
+    #     imgs : list of np.ndarray
+    #         List of images to add.
 
-        Returns
-        -------
-        None
-        """
-        shapelist = set([im.shape for im in imgs])
-        if len(shapelist) != 1:
-            QtWidgets.QApplication.restoreOverrideCursor()
-            msg = QtWidgets.QMessageBox()
-            msg.setIcon(QtWidgets.QMessageBox.Critical)
-            msg.setText("Different sizes!")
-            msg.setInformativeText(
-                'Images have varying sizes. Select image folder with same size images throughout.')
-            msg.setWindowTitle("TypeError")
-            return
-        if len(self.images) != 0:
-            if shapelist[0] != self.images[0].shape:
-                QtWidgets.QApplication.restoreOverrideCursor()
-                msg = QtWidgets.QMessageBox()
-                msg.setIcon(QtWidgets.QMessageBox.Critical)
-                msg.setText("Wrong sizes!")
-                msg.setInformativeText(
-                    'Images have different sizes than those already in buffer!')
-                msg.setWindowTitle("TypeError")
-                return
+    #     Returns
+    #     -------
+    #     None
+    #     """
+    #     shapelist = set([im.shape for im in imgs])
+    #     if len(shapelist) != 1:
+    #         QtWidgets.QApplication.restoreOverrideCursor()
+    #         msg = QtWidgets.QMessageBox()
+    #         msg.setIcon(QtWidgets.QMessageBox.Critical)
+    #         msg.setText("Different sizes!")
+    #         msg.setInformativeText(
+    #             'Images have varying sizes. Select image folder with same size images throughout.')
+    #         msg.setWindowTitle("TypeError")
+    #         return
+    #     if len(self.images) != 0:
+    #         if shapelist[0] != self.images[0].shape:
+    #             QtWidgets.QApplication.restoreOverrideCursor()
+    #             msg = QtWidgets.QMessageBox()
+    #             msg.setIcon(QtWidgets.QMessageBox.Critical)
+    #             msg.setText("Wrong sizes!")
+    #             msg.setInformativeText(
+    #                 'Images have different sizes than those already in buffer!')
+    #             msg.setWindowTitle("TypeError")
+    #             return
 
-        msk = segmentDComni(imgs)
-        self.masks += msk
-        self.images += imgs
+    #     msk = segmentDComni(imgs)
+    #     self.masks += msk
+    #     self.images += imgs
 
     def clear(self):
         """

@@ -1,11 +1,5 @@
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
-"""
-Created on Mon Jan  6 12:40:26 2025
 
-@author: victorionescu
-"""
-# Imports
+
 import cv2
 import numpy as np
 import matplotlib.pyplot as plt
@@ -100,7 +94,7 @@ def homography_gen(warp_stack):
         H_tot = np.matmul(wsp[i], H_tot)
         yield np.linalg.inv(H_tot)
 
-def apply_warping_fullview(images, warp_stack=None, PATH=None):
+def apply_warping_fullview(images, warp_stack=None, PATH=None, pad_with_mean=True):
     """Apply warping to create stabilized images with full view."""
     # Handle the case when there's only one image
     if len(images) <= 1:
@@ -125,8 +119,12 @@ def apply_warping_fullview(images, warp_stack=None, PATH=None):
     # Create padded first image with non-zero dimensions
     padded_height = max(1, images[0].shape[0] + top + bottom)
     padded_width = max(1, images[0].shape[1] + left + right)
-    image_0 = np.full((padded_height, padded_width),np.mean(images[0]), dtype=images[0].dtype)
-    
+    if pad_with_mean:
+        # Create a padded image filled with the mean of the first image
+        image_0 = np.full((padded_height, padded_width), np.mean(images[0]), dtype=images[0].dtype)
+    else:        # Create a padded image filled with zeros
+        image_0 = np.full((padded_height, padded_width), 0, dtype=images[0].dtype)
+
     # Careful slicing to avoid empty dimensions
     bottom_slice = None if bottom == 0 else -bottom
     right_slice = None if right == 0 else -right
@@ -157,7 +155,10 @@ def apply_warping_fullview(images, warp_stack=None, PATH=None):
             except StopIteration:
                 print(f"Warning: Not enough homography matrices for image {i+1}")
                 # Just add the original image with padding
-                padded_img = np.full((images[0].shape[0]+top+bottom, images[0].shape[1]+left+right),np.mean(images[0]), dtype=images[0].dtype)
+                if pad_with_mean:
+                    padded_img = np.full((images[0].shape[0]+top+bottom, images[0].shape[1]+left+right), np.mean(images[0]), dtype=images[0].dtype)
+                else:
+                    padded_img = np.zeros((images[0].shape[0]+top+bottom, images[0].shape[1]+left+right), dtype=images[0].dtype)
                 padded_img[top:top+img.shape[0], left:left+img.shape[1]] = img
                 imgs.append(padded_img)
     except Exception as e:
@@ -246,9 +247,24 @@ def obtain_network(imgs, scorethreshold=0.5):
     # imgs: list of 2D numpy arrays as images
     # scorethreshold: double to set in imagenetwork class
     processedimgs = imgs
-    for idx,i in enumerate(processedimgs):
-        if not np.any(i):
-            return idx
+    
+    # Check for empty images and handle gracefully
+    for idx, img in enumerate(processedimgs):
+        unique_vals = np.unique(img)
+        # If image has no labels (only background/zeros) or is completely empty
+        if len(unique_vals) <= 1 and (len(unique_vals) == 0 or unique_vals[0] == 0):
+            print(f"Warning: Image at index {idx} has no labels. Continuing with empty frame.")
+        # If image is completely empty (all zeros or no data)
+        elif not np.any(img):
+            print(f"Warning: Image at index {idx} is completely empty. Continuing with empty frame.")
+    
+    # Check if all images are empty
+    all_empty = all(len(np.unique(img)) <= 1 and (len(np.unique(img)) == 0 or np.unique(img)[0] == 0) 
+                   for img in processedimgs)
+    if all_empty:
+        print("Warning: All images are empty. Returning None.")
+        return 0
+    
     stackdata, dist = multiprocessframes(processedimgs)
 
 
@@ -302,6 +318,16 @@ def multiprocessframes(imagestack):
 
 
 def process_frame(currentimage, nextimage, imageid):
+    # Check for completely empty images or images with only background (zeros)
+    current_unique = np.unique(currentimage)
+    next_unique = np.unique(nextimage)
+    
+    # If either image has no labels (only zeros or empty)
+    current_empty = len(current_unique) <= 1 and (len(current_unique) == 0 or current_unique[0] == 0)
+    next_empty = len(next_unique) <= 1 and (len(next_unique) == 0 or next_unique[0] == 0)
+    
+    if current_empty or next_empty:
+        return (np.zeros((0, 2)), np.zeros((0, 2)), np.zeros((0, 2)), np.zeros((0, 2)), [], np.zeros((0, 2)))
     overlapdict = {}
     COMdict = {}
     angledict = {}
@@ -394,6 +420,10 @@ def distancematrix(COMarray1, COMarray2):
 
 
 def inversedistancematrix(COMarray1, COMarray2):
+    # Handle empty arrays
+    if len(COMarray1) == 0 or len(COMarray2) == 0:
+        return np.zeros((len(COMarray1), len(COMarray2)))
+    
     dists = distance_matrix(COMarray1, COMarray2)
     dists[dists == 0] = 0.0001
     dists = 1/dists
@@ -402,6 +432,10 @@ def inversedistancematrix(COMarray1, COMarray2):
 
 
 def ratiomatrix(array1, array2):
+    # Handle empty arrays
+    if len(array1) == 0 or len(array2) == 0:
+        return np.zeros((len(array1), len(array2)))
+    
     matrix = np.empty((len(array1), len(array2)))
 
     for i in range(len(array1)):
@@ -422,6 +456,9 @@ def ratiomatrix(array1, array2):
 
 
 def evaluateframe(frame, framedict1, framedict2, distancematrix, ind):
+    # Handle empty frames - if distance matrix is empty, return empty list
+    if distancematrix.size == 0:
+        return []
     
     distancelist = [distancematrix[i, :]
                     for i in range(distancematrix.shape[0])]

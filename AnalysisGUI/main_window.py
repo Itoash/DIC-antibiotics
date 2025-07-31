@@ -43,21 +43,13 @@ class MainWindow(QtWidgets.QMainWindow):
         self.docks = AnalysisArea(self)
         self.segmentor = None
         self.tracker = None
-        self.segmentation_params =  {
-            'channels': [0, 0],
-            'rescale': None,
-            'mask_threshold': -2,
-            'flow_threshold': 0.99,
-            'transparency': False,
-            'omni': True,
-            'cluster': False,
-            'resample': True,
-            'verbose': False,
-            'tile': True,
+        self.segmentation_params =   {
+            'diameter': None,
+            'flow_threshold': 0.4,
+            'cellprob_threshold': 0.0,
             'niter': None,
-            'augment': True,
-            'affinity_seg': True,
-            'invert': True
+            'augment': False,
+            'eukaryotic_mode': False
         }
         self.setCentralWidget(self.docks)
 
@@ -65,7 +57,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self.updateAnalysis()
         self.createActions()
         self.createMenu()
-        self.setWindowTitle('Analiza AC')
+        self.updateWindowTitle()
 
     def updateAnalysis(self):
         """
@@ -152,7 +144,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self.updateAnalysis()  # update Plots
         
 
-    def loadstack(self, filename=None):
+    def loadstack(self, filename=None, set_lim=None):
         """
         Load a stack of images from a directory.
 
@@ -232,7 +224,13 @@ class MainWindow(QtWidgets.QMainWindow):
         except IndexError:
             framerate = int(fps[0])
         # limits are endpoints
-        limits = (0, len(images)-1)
+        if set_lim is None:
+            # if no limits are set, use all images
+            limits = (0, len(images)-1)
+        else:
+            # if limits are set, use them
+            limits = (min(int(set_lim[0] * len(images)),len(images)-1),
+                  min(int(set_lim[1] * len(images)-1),len(images)-1))
         images = np.asarray(images)
         _,codename = os.path.split(filename)
         print(codename)
@@ -280,6 +278,7 @@ class MainWindow(QtWidgets.QMainWindow):
             msg.setWindowTitle("IndexError")
             msg.exec_()
             return
+        
         if self.tracker is not None:
             msg = QtWidgets.QMessageBox()
             msg.setIcon(QtWidgets.QMessageBox.Critical)
@@ -288,7 +287,7 @@ class MainWindow(QtWidgets.QMainWindow):
             msg.setWindowTitle("TrackerOpen")
             msg.exec_()
             return
-            
+        
 
         self.tracker = TrackWindow(self.segBuffer, self.analysisImages,parent=self)
         self.tracker.window_closed.connect(self.tracker_closed)
@@ -324,9 +323,9 @@ class MainWindow(QtWidgets.QMainWindow):
             self, "Open File", QtCore.QDir.homePath(), options=options)
         if filename:
             self.clearBuffer()
-            ACpath = [f for f in os.listdir(filename) if 'ac' in f.lower()][0]
-            DCpath = [f for f in os.listdir(filename) if 'dc' in f.lower()][0]
-            segpath = [f for f in os.listdir(filename) if 'seg' in f.lower()][0]
+            ACpath = [f for f in os.listdir(filename) if 'acs' in f.lower()][0]
+            DCpath = [f for f in os.listdir(filename) if 'dcs' in f.lower()][0]
+            segpath = [f for f in os.listdir(filename) if 'segmentation' in f.lower()][0]
             datapath = [f for f in os.listdir(filename) if 'data' in f.lower() and f.endswith('.csv')][0]
             with open(os.path.join(filename,datapath),'r') as file:
                 lines = file.readlines()
@@ -337,6 +336,17 @@ class MainWindow(QtWidgets.QMainWindow):
                 times = [float(t) for t in times]
                 times = list(set(times))
                 times = list(sorted(times))
+            
+            if len(times) == 0:
+                msg = QtWidgets.QMessageBox()
+                msg.setIcon(QtWidgets.QMessageBox.Critical)
+                msg.setText("No valid times found!")
+                msg.setInformativeText('The data file does not contain valid time information.')
+                msg.setWindowTitle("TimeError")
+                msg.exec_()
+                return
+            print(f"Found {len(times)} unique times")
+
                         
             ACs = []
             DCs = []
@@ -469,7 +479,7 @@ class MainWindow(QtWidgets.QMainWindow):
             msg.exec_()
             return
         files = [os.path.join(filename, f) for f in os.listdir(
-            filename) if '.DS_Store' not in f and os.path.isdir(os.path.join(filename, f)) and '_' in f]
+            filename) if '.DS_Store' not in f and os.path.isdir(os.path.join(filename, f)) and '_' in f and 'x' in f.lower()]
         timestrings = [f.split("_")[-1] for f in files]
         ext = [f.split(' ')[-1] for f in timestrings]
         timestrings = [f.split(' ')[0] for f in timestrings]
@@ -507,10 +517,18 @@ class MainWindow(QtWidgets.QMainWindow):
         progress.setWindowModality(QtCore.Qt.WindowModal)
         progress.setMinimumDuration(0)
         progress.setValue(0)
+        current_limits = self.imageData.limits
+        print(f'Current limits: {current_limits}')
+        current_length = self.imageData.signaldata[0].shape[0]
+        print(f'Current length: {current_length}')
+        fraction_limits = (current_limits[0]/ current_length,
+                           current_limits[1]/current_length)
+        print(f'Fraction limits: {fraction_limits}')
+        
         tic = tm.time()
         for idx, i in enumerate(range(start_index, len(files), num_locations)):
             if os.path.isdir(files[i]):
-                self.loadstack(files[i])
+                self.loadstack(files[i], set_lim=fraction_limits)
                 self.addImage(resort=False)
             else:
                 print(f"Skipping {files[i]} as it is not a directory")
@@ -593,6 +611,8 @@ class MainWindow(QtWidgets.QMainWindow):
         DC = self.imageData.DC
         AC = self.imageData.AC
         name = self.imageData.codename
+        # Update segmentation model based on current mode
+        self.segBuffer.setModel(eukaryotes=self.segmentation_params.get('eukaryotic_mode', False))
         self.segBuffer.addImage(DC,self.segmentation_params)
         self.analysisImages.addImage(AC, DC, name,resort=resort)
         print('Added image!')
@@ -620,22 +640,15 @@ class MainWindow(QtWidgets.QMainWindow):
         """
         Show a dialog to edit segmentation parameters.
         """
+
         # Default parameters from seg_utils.pyx
         default_params = {
-            'channels': [0, 0],
-            'rescale': None,
-            'mask_threshold': -2,
-            'flow_threshold': 0.99,
-            'transparency': False,
-            'omni': True,
-            'cluster': False,
-            'resample': True,
-            'verbose': False,
-            'tile': True,
+            'diameter': None,
+            'flow_threshold': 0.4,
+            'cellprob_threshold': 0.0,
             'niter': None,
-            'augment': True,
-            'affinity_seg': True,
-            'invert': True
+            'augment': False,
+            'eukaryotic_mode': False
         }
 
         # Use stored params if available
@@ -657,7 +670,15 @@ class MainWindow(QtWidgets.QMainWindow):
             w = QtWidgets.QLineEdit(','.join(str(x) for x in val))
             return w
 
+        # Special handling for eukaryotic_mode to put it at the top
+        if 'eukaryotic_mode' in params:
+            w = bool_widget(params['eukaryotic_mode'])
+            widgets['eukaryotic_mode'] = w
+            layout.addRow("Eukaryotic Mode (vs Bacterial)", w)
+
         for key, val in params.items():
+            if key == 'eukaryotic_mode':  # Skip since we already added it
+                continue
             if isinstance(val, bool):
                 w = bool_widget(val)
             elif isinstance(val, list):
@@ -700,7 +721,48 @@ class MainWindow(QtWidgets.QMainWindow):
                     new_params[key] = None if t == '' else t
                 else:
                     new_params[key] = w.text()
+            
+            # Check if segmentation mode changed and update the model accordingly
+            old_mode = self.segmentation_params.get('eukaryotic_mode', False)
+            new_mode = new_params.get('eukaryotic_mode', False)
+            
             self.segmentation_params = new_params
+            
+            if old_mode != new_mode:
+                # Update the segmentation buffer model when mode changes
+                self.segBuffer.setModel(eukaryotes=new_mode)
+                # Update window title to reflect the new mode
+                self.updateWindowTitle()
+                print(f"Segmentation mode changed to: {'Eukaryotic' if new_mode else 'Bacterial'}")
+
+    def toggleSegmentationMode(self):
+        """
+        Toggle between bacterial and eukaryotic segmentation modes.
+        """
+        current_mode = self.segmentation_params.get('eukaryotic_mode', False)
+        new_mode = not current_mode
+        self.segmentation_params['eukaryotic_mode'] = new_mode
+        
+        # Update the segmentation buffer model
+        self.segBuffer.setModel(eukaryotes=new_mode)
+        
+        # Update window title
+        self.updateWindowTitle()
+        
+        # Show a message to confirm the change
+        mode_name = "Eukaryotic" if new_mode else "Bacterial"
+        msg = QtWidgets.QMessageBox(self)
+        msg.setIcon(QtWidgets.QMessageBox.Information)
+        msg.setText(f"Segmentation mode switched to: {mode_name}")
+        msg.setWindowTitle("Mode Changed")
+        msg.exec_()
+
+    def updateWindowTitle(self):
+        """
+        Update the window title to include the current segmentation mode.
+        """
+        mode_name = "Eukaryotic" if self.segmentation_params.get('eukaryotic_mode', False) else "Bacterial"
+        self.setWindowTitle(f'AnalysisGUI - {mode_name} Mode')
 
     def createActions(self):
         """
@@ -739,6 +801,8 @@ class MainWindow(QtWidgets.QMainWindow):
             "Start tracking with seg. buffer", self, shortcut="Ctrl+K", triggered=self.track)
         self.segmentationSettingsAct = QtWidgets.QAction(
             "Segmentation Settings", self, triggered=self.showSegmentationSettingsDialog)
+        self.toggleSegModeAct = QtWidgets.QAction(
+            "Toggle Bacterial/Eukaryotic Mode", self, shortcut="Ctrl+M", triggered=self.toggleSegmentationMode)
 
     def closeApp(self):
         """
@@ -775,6 +839,8 @@ class MainWindow(QtWidgets.QMainWindow):
         self.segMenu.addAction(self.clearsegAct)
         self.segMenu.addAction(self.importSeg)
         self.segMenu.addAction(self.segmentationSettingsAct)
+        self.segMenu.addSeparator()
+        self.segMenu.addAction(self.toggleSegModeAct)
         self.trackMenu = QtWidgets.QMenu("&Tracking", self)
         self.trackMenu.addAction(self.trackAct)
         self.menuBar().addMenu(self.fileMenu)
