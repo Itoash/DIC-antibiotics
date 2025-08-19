@@ -53,3 +53,6 @@ wheels/
 
 # Local testing scripts
 build_deploy.sh
+
+# Local documentation files
+*.txt

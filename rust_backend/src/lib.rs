@@ -1066,7 +1066,7 @@ pub mod ac{
 
     }
     use pyo3::prelude::*;
-    use numpy::{PyArray, PyReadonlyArray3,ToPyArray};
+    use numpy::{PyArray, PyReadonlyArray3,IntoPyArray};
     use ndarray::{s,Dim};
 
     
@@ -1200,11 +1200,11 @@ pub mod ac{
 
         // Convert results to Python/NumPy
         let time = Instant::now();
-        let ac_py = ac.to_pyarray(py);
-        let dc_py = dc.to_pyarray(py);
-        let time_py = times.to_pyarray(py);
-        let stack_py = stack.to_pyarray(py);
-         let elapsed = time.elapsed();
+        let ac_py = ac.into_pyarray(py);
+        let dc_py = dc.into_pyarray(py);
+        let time_py = times.into_pyarray(py);
+        let stack_py = stack.into_pyarray(py);
+        let elapsed = time.elapsed();
         println!("Time to prepare results:{:?}",elapsed);
         
         Ok((ac_py, dc_py, (time_py,stack_py),(final_start,final_end)))
