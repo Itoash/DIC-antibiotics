@@ -2,6 +2,8 @@ from pyqtgraph.Qt import QtWidgets
 import numpy as np 
 import os
 from cellpose import models
+import requests
+import zipfile
 class AnalysisBuffer:
     """
     Class for long-term storage of DC and AC images, as well as metadata.
@@ -53,9 +55,7 @@ class AnalysisBuffer:
         self.times.append(time)
         self.abstimes.append(abstime)
         if resort:
-            print(self.names)
             self.sortByAbsTime()
-            print(self.names)
 
     def sortByAbsTime(self):
         """
@@ -124,9 +124,95 @@ class AnalysisBuffer:
         self.times = []
         self.abstimes = []
 
+MODEL_URLS = {
+    "cell_model": "https://github.com/Itoash/DIC-antibiotics/releases/download/v1.0/cpsam-DIC.zip",
+    "bact_model": "https://github.com/Itoash/DIC-antibiotics/releases/download/v1.0/cpsam-DIC-bact.zip",
+}
 
-CELL_MODEL_PATH = os.path.join(os.path.expanduser('~'),'analysisgui-cpsam_models','cpsam-DIC')
-BACT_MODEL_PATH = os.path.join(os.path.expanduser('~'),'analysisgui-cpsam_models','cpsam-DIC-bact')
+PERSISTENT_MODEL_DIR = os.path.expanduser("~/.analysisgui/models")
+
+CELL_MODEL_PATH = os.path.join(PERSISTENT_MODEL_DIR, 'cpsam-DIC')
+BACT_MODEL_PATH = os.path.join(PERSISTENT_MODEL_DIR, 'cpsam-DIC-bact')
+
+def download_and_unzip_model(url, output_dir):
+    """
+    Downloads and unzips a model from the given URL.
+
+    Parameters
+    ----------
+    url : str
+        URL of the zipped model file.
+    output_dir : str
+        Directory to store the unzipped model.
+
+    Returns
+    -------
+    None
+    """
+    os.makedirs(output_dir, exist_ok=True)
+    zip_path = os.path.join(output_dir, os.path.basename(url))
+
+    # Download the file if it doesn't already exist
+    if not os.path.exists(zip_path):
+        print(f"Downloading model from {url}...")
+        try:
+            response = requests.get(url, stream=True, timeout=30)
+            response.raise_for_status()  # Raises an HTTPError for bad responses
+            
+            # Get the total file size if available
+            total_size = int(response.headers.get('content-length', 0))
+            
+            with open(zip_path, "wb") as f:
+                downloaded = 0
+                for chunk in response.iter_content(chunk_size=8192):
+                    if chunk:  # filter out keep-alive chunks
+                        f.write(chunk)
+                        downloaded += len(chunk)
+                        if total_size > 0:
+                            percent = (downloaded / total_size) * 100
+                            print(f"Download progress: {percent:.1f}%", end='\r')
+            
+            print(f"\nDownloaded model to {zip_path} ({downloaded} bytes)")
+            
+            # Verify the downloaded file is a valid zip
+            if not zipfile.is_zipfile(zip_path):
+                print(f"Error: Downloaded file is not a valid zip file. Removing {zip_path}")
+                os.remove(zip_path)
+                return
+                
+        except requests.exceptions.RequestException as e:
+            print(f"Error downloading model: {e}")
+            if os.path.exists(zip_path):
+                os.remove(zip_path)
+            return
+        except Exception as e:
+            print(f"Unexpected error during download: {e}")
+            if os.path.exists(zip_path):
+                os.remove(zip_path)
+            return
+
+    # Check if model is already extracted
+    model_name = os.path.basename(url).replace('.zip', '')
+    extracted_path = os.path.join(output_dir, model_name)
+    if os.path.exists(extracted_path):
+        print(f"Model already extracted at {extracted_path}")
+        return
+
+    # Unzip the file
+    try:
+        with zipfile.ZipFile(zip_path, "r") as zip_ref:
+            zip_ref.extractall(output_dir)
+            print(f"Unzipped model to {output_dir}")
+            
+        # Clean up the zip file after successful extraction
+        os.remove(zip_path)
+        print(f"Removed zip file {zip_path}")
+        
+    except zipfile.BadZipFile:
+        print(f"Error: {zip_path} is not a valid zip file or is corrupted")
+        os.remove(zip_path)
+    except Exception as e:
+        print(f"Error extracting zip file: {e}")
 
 
 class SegmentationBuffer:
@@ -143,12 +229,37 @@ class SegmentationBuffer:
         self.images = []
         self.masks = []
         self.imagenet = None
+        self.checkModels()
         if eukaryotes:
             self.model = models.CellposeModel(gpu=True, pretrained_model=CELL_MODEL_PATH,use_bfloat16=False)
             self.eukaryotic_mode = True
         else:
             self.model = models.CellposeModel(gpu=True, pretrained_model=BACT_MODEL_PATH,use_bfloat16=False)
             self.eukaryotic_mode = False
+
+    def checkModels(self):
+        """
+        Checks if models exist and downloads them if they don't.
+        """
+        
+        cell_model_exists = os.path.exists(CELL_MODEL_PATH)
+        bact_model_exists = os.path.exists(BACT_MODEL_PATH)
+        
+        if not cell_model_exists:
+            print(f"Cell model not found at {CELL_MODEL_PATH}")
+            print(f"Downloading cell model from {MODEL_URLS['cell_model']}...")
+            download_and_unzip_model(MODEL_URLS['cell_model'], PERSISTENT_MODEL_DIR)
+        
+        if not bact_model_exists:
+            print(f"Bacterial model not found at {BACT_MODEL_PATH}")
+            print(f"Downloading bacterial model from {MODEL_URLS['bact_model']}...")
+            download_and_unzip_model(MODEL_URLS['bact_model'], PERSISTENT_MODEL_DIR)
+        
+        # Verify models exist after download
+        if not os.path.exists(CELL_MODEL_PATH):
+            print(f"Warning: Cell model still not found at {CELL_MODEL_PATH}")
+        if not os.path.exists(BACT_MODEL_PATH):
+            print(f"Warning: Bacterial model still not found at {BACT_MODEL_PATH}")
 
     def setModel(self, eukaryotes=False):
         """
@@ -273,3 +384,15 @@ class SegmentationBuffer:
         """
         self.images.pop(index)
         self.masks.pop(index)
+
+def test_url_access():
+    """Test if the URLs are accessible"""
+    for name, url in MODEL_URLS.items():
+        try:
+            response = requests.head(url, timeout=10)
+            print(f"{name}: Status {response.status_code}")
+            if response.status_code == 200:
+                print(f"  Content-Length: {response.headers.get('content-length', 'Unknown')}")
+                print(f"  Content-Type: {response.headers.get('content-type', 'Unknown')}")
+        except Exception as e:
+            print(f"{name}: Error - {e}")

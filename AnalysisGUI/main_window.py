@@ -99,7 +99,7 @@ class MainWindow(QtWidgets.QMainWindow):
             index = self.docks.treeview.currentIndex()
             filename = self.docks.treeview.model.filePath(index)
         # Check 1: if it's not a directory, display message and abort
-        print(filename)
+        
         if not os.path.isdir(filename):
             QtWidgets.QApplication.restoreOverrideCursor()
             msg = QtWidgets.QMessageBox()
@@ -157,7 +157,6 @@ class MainWindow(QtWidgets.QMainWindow):
             index = self.docks.treeview.currentIndex()
             filename = self.docks.treeview.model.filePath(index)
         # Check 1: if it's not a directory, display message and abort
-        print(filename)
         if not os.path.isdir(filename):
             QtWidgets.QApplication.restoreOverrideCursor()
             msg = QtWidgets.QMessageBox()
@@ -233,7 +232,6 @@ class MainWindow(QtWidgets.QMainWindow):
                   min(int(set_lim[1] * len(images)-1),len(images)-1))
         images = np.asarray(images)
         _,codename = os.path.split(filename)
-        print(codename)
         self.imageData.codename = codename
         self.imageData.framerate = framerate
         self.imageData.limits = limits  # set limits
@@ -345,7 +343,7 @@ class MainWindow(QtWidgets.QMainWindow):
                 msg.setWindowTitle("TimeError")
                 msg.exec_()
                 return
-            print(f"Found {len(times)} unique times")
+        
 
                         
             ACs = []
@@ -357,8 +355,6 @@ class MainWindow(QtWidgets.QMainWindow):
             ACs = [i.astype(float) for i in ACs]
             DCs = [i.astype(float) for i in DCs]
             segs = [i.astype(float) for i in segs]
-            print(f"Loaded {len(ACs)} images")
-            print(type(DCs))
             self.segBuffer.images = list(DCs)[:]
             self.segBuffer.masks = list(segs)[:]
             self.analysisImages.ACs = list(ACs)[:]
@@ -366,7 +362,6 @@ class MainWindow(QtWidgets.QMainWindow):
             self.analysisImages.names = [str(i) for i in times]
             self.analysisImages.times = times[:]
             self.analysisImages.abstimes = times[:]
-            print(f"Loaded {len(self.analysisImages.ACs)} images")
             
         
             
@@ -435,12 +430,8 @@ class MainWindow(QtWidgets.QMainWindow):
             QtWidgets.QMessageBox.warning(
                 self, "Index Error", "Starting index is out of bounds.")
             return
-        print("Got parameters:", num_locations, start_index)
         self.clearBuffer()
-        # if 'segmentor' in self.__dict__.keys():
-        #     self.segmentor.close()
-        # if 'tracker' in self.__dict__.keys():
-        #     self.tracker.close()
+        
         total = len(range(start_index, len(spoolfiles), num_locations))
         progress = QtWidgets.QProgressDialog("Loading spools...", "Cancel", 0, total, self)
         progress.setWindowModality(QtCore.Qt.WindowModal)
@@ -518,12 +509,10 @@ class MainWindow(QtWidgets.QMainWindow):
         progress.setMinimumDuration(0)
         progress.setValue(0)
         current_limits = self.imageData.limits
-        print(f'Current limits: {current_limits}')
+        
         current_length = self.imageData.signaldata[0].shape[0]
-        print(f'Current length: {current_length}')
         fraction_limits = (current_limits[0]/ current_length,
                            current_limits[1]/current_length)
-        print(f'Fraction limits: {fraction_limits}')
         
         tic = tm.time()
         for idx, i in enumerate(range(start_index, len(files), num_locations)):
@@ -615,11 +604,6 @@ class MainWindow(QtWidgets.QMainWindow):
         self.segBuffer.setModel(eukaryotes=self.segmentation_params.get('eukaryotic_mode', False))
         self.segBuffer.addImage(DC,self.segmentation_params)
         self.analysisImages.addImage(AC, DC, name,resort=resort)
-        print('Added image!')
-        print(
-            f'Segbuffer: masks/DCs{len(self.segBuffer.masks),len(self.segBuffer.images)}')
-        print(
-            f'Analysis buff: ACs/DCs{len(self.analysisImages.ACs),len(self.analysisImages.DCs)}')
     
     def clearBuffer(self):
         """

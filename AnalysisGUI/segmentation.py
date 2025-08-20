@@ -132,7 +132,6 @@ class SegmentWindow(QtWidgets.QMainWindow):
                 return
                 
             # Remove the current image and associated data
-            print('Deleting image...')
             self.segBuffer.images.pop(currentIdx)
             self.segBuffer.masks.pop(currentIdx)
             self.analysisBuffer.ACs.pop(currentIdx)
@@ -240,7 +239,6 @@ class SegmentWindow(QtWidgets.QMainWindow):
             True to enable drawing mode, False to disable
         """
         if checked:
-            print('entered draw mode')
             # Create drawing kernel with current brush parameters
             val = self.brushcolor
             kern = np.full((self.brushsize, self.brushsize), val)
@@ -252,7 +250,6 @@ class SegmentWindow(QtWidgets.QMainWindow):
             self.DCplot.currentover.drawKernel = None
             self.Segplot.imageItem.drawKernel = None
             self.DCplot.updateImage()
-            print('exited draw mode')
 
     def opacityChanged(self, value):
         """
@@ -520,7 +517,6 @@ class OverlayImage(pg.ImageView):
         if hasattr(self.view, 'scene'):
             scene = self.view.scene()
             if hasattr(scene, 'clickEvents'):
-                print('resetclicks')
                 scene.clickEvents = []
 
         # Force an update
@@ -549,12 +545,10 @@ class OverlayImage(pg.ImageView):
             self.rescaleLabels()
             self.currentover.updateImage(self.currentover.image)
             self.sigLabelDeleted.emit(self.currentIndex, val)
-            print(f'Deleting label {val}')
         else:
-            print("No label to delete")
             return
         self.updateImage()
-        print('delete label')
+        
 
     def changeLabel(self):
         """
@@ -570,16 +564,13 @@ class OverlayImage(pg.ImageView):
         if ((0 <= row < self.currentover.image.shape[0]) and 
             (0 <= col < self.currentover.image.shape[1])):
             val = self.currentover.image[row, col]
-            print(f'Changing label {val}')
             # Change all pixels with this label to brush color
             self.currentover.image[self.currentover.image == val] = self.parent.brushcolor
             self.rescaleLabels()
             self.currentover.updateImage(self.currentover.image)
         else:
-            print("No label to change")
             return
         self.updateImage()
-        print('Change label')
 
     def mouseDoubleClickEvent(self, event):
         """
@@ -597,6 +588,5 @@ class OverlayImage(pg.ImageView):
         if ((0 <= row < self.currentover.image.shape[0]) and 
             (0 <= col < self.currentover.image.shape[1])):
             if event.button() == QtCore.Qt.LeftButton:
-                print("Clicked on smth")
                 self.sigClickedImage.emit(
                     self.currentIndex, self.currentover.image[row, col])

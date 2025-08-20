@@ -8,22 +8,12 @@
         - [Tracking](#tracking)
         - [Single Cell Measurements](#single-cell-measurements)
 2. [Installation](#installation)
-3. [User Guide](#user-guide)
-    - [Main Window](#1-main-window)
-        - [File Tree](#1a-the-file-tree)
-        - [AC Pane](#1b-the-ac-pane)
-        - [DC Pane](#1c-the-dc-pane)
-        - [Raws Pane](#1d-the-raws-pane)
-        - [Signals Section](#1e-the-signals-section)
-4. [Troubleshooting](#Troubleshooting)
-
-    - [Installation errors](#installation-errors)
-    - [Error messages](#error-messages)
-    - [Undocumented errors and the debug console](#undocumented-errrors-and-the-debug-console)
-5. [Appendix](#appendix)
+3. [Quickstart](#quickstart)
+4. [User Guide](#user-guide)
+5. [Troubleshooting](#troubleshooting)
+6. [Appendix](#appendix)
     - [Python virtual environments](#python-virtual-environments)
-    - [Naming conventions](#file-naming-conventions-and-other-headaches)
-
+    - [Naming conventions](#naming-conventions)
 
 # Description and Features
 
@@ -133,7 +123,7 @@ Follow these steps to install the application:
 
 5. Create and activate a [Python virtual environment](https://docs.python.org/3/library/venv.html).
 
-6. Download the archive and move it to the virtual environment folder.
+6. Download the artifacts from the latest GitHub Actions run from the [repository](https://github.com/Itoash/DIC-antibiotics/actions) and move it to the virtual environment folder.
 
 7. Install the application:
 
@@ -162,13 +152,13 @@ For this workflow a "quickstart guide" for the anlaysis part would run as follow
     startGUI
     ```
 
-2. You'll be greeted by the main window screen; you can now try out the signal processing by selecting a measurement folder (either an Andor Solis spool folder or a TIFF images folder following the [naming convention](#file-naming-conventions-and-other-headaches)) and entering the **Load Stack/Load Spool** command from the file menu, or **Ctrl+L/Ctrl+P** as a shortcut.
+2. If this is the first startup, wait for the models to be downloaded
+3. You'll be greeted by the main window screen; you can now try out the signal processing by selecting a measurement folder (either an Andor Solis spool folder or a TIFF images folder following the [naming convention](#file-naming-conventions-and-other-headaches)) and entering the **Load Stack/Load Spool** command from the file menu, or **Ctrl+L/Ctrl+P** as a shortcut.
     <div class="image-caption-block">
       <img src="./assets/start_screen_labelled.png" alt="The main splash screen displayed upon application startup. Green: file tree. Blue: AC plot. Yellow: DC/Raw images plots. Red: Signals panel.">
       <div class="caption">The main splash screen displayed upon application startup. Green: file tree. Blue: AC plot. Yellow: DC/Raw images plots. Red: Signals panel.</div>
     </div>
-
-3. The results will be displayed in the AC, DC and Raws plots of the main window. The mean signal and Fourier Transform will be shown in the Signals plot. From the Signals plot multiple signal processing options can be selected for further tailoring the analysis; for now, the only important parameter is the frequency.
+4. The results will be displayed in the AC, DC and Raws plots of the main window. The mean signal and Fourier Transform will be shown in the Signals plot. From the Signals plot multiple signal processing options can be selected for further tailoring the analysis; for now, the only important parameter is the frequency.
     <div class="image-caption-block">
       <img src="./assets/signal_pane.png" alt="The Signals panel. All the options for signal processing are located here. The **Frequency** field has to match the applied frequency during the experiment.">
       <div class="caption">The Signals panel. All the options for signal processing are located here. The <b>Frequency</b> field has to match the applied frequency during the experiment.</div>
@@ -180,15 +170,15 @@ For this workflow a "quickstart guide" for the anlaysis part would run as follow
       <div class="caption">Loaded microscopy data. The <b>amplitude (AC)</b> image is visible in the centre, while the <b>time-averaged (DC)</b> and <b>Raw</b> image data is nested in the panel on the top right. The <b>Signals</b> plot now displays the average signal and FFT for the loaded measurement.</div>
     </div>
 
-4. When satisfied with the signal analysis results, you'll want to load the entire experiment for analysis. You can do that by selecting the relevant experiment folder in the file explorer on the left, then using either the **Load Folder of Spools** or **Load Folder of Stacks** option in the **File** menu (or by hitting either Ctrl+? or Ctrl+A, respectively). This will start the batch loading of images, automatically applying the same signal processing steps you set after you hit **Update Analysis**, segmenting the resulting DC images, and storing them in order, in a buffer. Refer to the current nmaming convention in the Appendix (link appendix) for information on how the program expects TIFF folders to be called.
+5. When satisfied with the signal analysis results, you'll want to load the entire experiment for analysis. You can do that by selecting the relevant experiment folder in the file explorer on the left, then using either the **Load Folder of Spools** or **Load Folder of Stacks** option in the **File** menu (or by hitting either Ctrl+? or Ctrl+A, respectively). This will start the batch loading of images, automatically applying the same signal processing steps you set after you hit **Update Analysis**, segmenting the resulting DC images, and storing them in order, in a buffer. Refer to the current nmaming convention in the Appendix (link appendix) for information on how the program expects TIFF folders to be called.
 
-5. After loading is complete, you are free to select **Start Segmentation** or **Start Tracking** from the **Segmentation** and **Tracking** menus, respectively. In general, the tracking menu performs a lot of the same functionality as the segmentation menu, with the added bonus of manipulating cell lineages and filtering masks based on cell features; thus it's recommended to skip directly to tracking if the masks are good enough.
+6. After loading is complete, you are free to select **Start Segmentation** or **Start Tracking** from the **Segmentation** and **Tracking** menus, respectively. In general, the tracking menu performs a lot of the same functionality as the segmentation menu, with the added bonus of manipulating cell lineages and filtering masks based on cell features; thus it's recommended to skip directly to tracking if the masks are good enough.
     <div class="image-caption-block">
       <img src="./assets/tracking_menu.png" alt="Start Tracking option">
       <div class="caption">Start Tracking option</div>
     </div>
 
-6. The Tracking window displays an overlaid mask/DC image (top) and a lineage graph (bottom).
+7. The Tracking window displays an overlaid mask/DC image (top) and a lineage graph (bottom).
     <div class="image-caption-block">
       <img src="./assets/tracking_window.png" alt="The Tracking window. The currently selected node in the graph is highlighted in the overlay. The graph can be navigated via the arrow keys, and opacity of the overlay can be adjusted by using the slider in the toolbar.">
       <div class="caption">The Tracking window. The currently selected node in the graph is highlighted in the overlay. The graph can be navigated via the arrow keys, and opacity of the overlay can be adjusted by using the slider in the toolbar.</div>
@@ -210,8 +200,7 @@ For this workflow a "quickstart guide" for the anlaysis part would run as follow
       <img src="./assets/visualisation_buttons.png" alt="Buttons for opening visualisations.">
       <div class="caption">Buttons for opening visualisations.</div>
     </div>
-
-7. Hitting either **Open Cell Visualiser** or **Open Time Series Viewer** will take you to two data visualsiation windows: one for visualising the cells' detected contours in both AC and DC images:
+8. Hitting either **Open Cell Visualiser** or **Open Time Series Viewer** will take you to two data visualsiation windows: one for visualising the cells' detected contours in both AC and DC images:
     <div class="image-caption-block">
       <img src="./assets/cell_vis_window.png" alt="Cell visualisation window. Draws interior and external contours on both AC and DC images. Multiple cells can be seelcted for simlutanous viewing.">
       <div class="caption">Cell visualisation window. Draws interior and external contours on both AC and DC images. Multiple cells can be seelcted for simlutanous viewing.</div>
@@ -222,3 +211,57 @@ For this workflow a "quickstart guide" for the anlaysis part would run as follow
       <img src="./assets/time_series_window.png" alt="Time Series display with all cells plotted. Time range of interest can be seelcted using the sliding window on the bottom plot. Multiple selection modes (single-cell, multi-cell, lineage, all cells) are available.">
       <div class="caption">Time Series display with all cells plotted. Time range of interest can be seelcted using the sliding window on the bottom plot. Multiple selection modes (single-cell, multi-cell, lineage, all cells) are available.</div>
     </div>
+
+9. Using the "Save" option from the file menu (or hitting **Ctrl+S**) will prompt you for a directory to save the computed AC, DC, and segmentation images, as well as a *cell_data.csv* file which contains the measured observables for each cell, for each timepoint.
+
+# User Guide
+
+**[UNDER CONSTRUCTION]**
+
+# Troubleshooting
+
+**[UNDER CONSTRUCTION]**
+
+# Appendix
+
+## Python virtual environments
+
+Python virtual environments are essentially a way of compartmentalizing package installations, so as to prevent version conflicts and other unpleasantnes that come with installing every dependency globally. There are several [flavours](https://realpython.com/python-virtual-environments-a-primer/) of virtual environments, but the one recommended for this app is the default venv. See [Installation](#installation) for how to make a virtual environment. 
+
+When running the app, you'll want to:
+
+1. In a terminal/command prompt, navigate (via the [cd](https://tutorials.codebar.io/command-line/introduction/tutorial.html#:~:text=cd%20or%20change%20directory,%24%20ls) command) to your virtual environment directory.
+2. Then depending on your terminal, you have a few alternatives:
+
+<div class="image-caption-block">
+      <img src="./assets/venv_commands.png" alt="Platform and shell-specific commands for activating a virtual environment.">
+      <div class="caption">Platform and shell-specific commands for activating a virtual environment.</div>
+    </div>
+
+This has the effect of essentially switching the Python interpreteer and available packages from the global one to the one in the virtual environment. Be aware that this is only valid for the current terminal seesion! Quitting or closing the shell will cause it to reset to the global default, and environment-specific commands (like the one to start this app) only work in this specific shell session. For more information, consult the official Python documentation on this topic. If you've activated the virtual environment, the `startGUI` command should work.
+
+## Naming conventions
+
+Due to the way the application was written **around** the available data, the I/O system of the progra expects a certain naming convention to be able to extract the necessary metadata from the files. This can change in the future. For Andor spool files, there is no naming convention, as all metadata is saved in a header file. For folders of `.tif` files however (one folder containing a measurement/time series) some information needs to be included in the filename, most importantly:
+
+- Camera framerate
+- Timestamps
+
+One example filename is
+`100x_DICTL5v7_850mV_1Hz_40ms_16v7fps_20241219_10600 PM`.
+In essence, this filename contains multiple pieces of information, but we are only interested in the framerate (middle section marked *fps*) and the timestamp at the very end. As long as a folder contains these two sections, separated by `_` characters, the app will be able to extract the necessary data. In order to understand how to format the filename, let's look at what the app actually searches for:
+
+### Framerate
+
+This one is easy: because `_` characters are separators, the program separates the filename by this separator and looks for any content in the separated list containing the `fps` sequence. Order does not matter, but position is important; this has to be paced **before** the timestamp, as we'll see in a moment. Also note that fractional values of the framerate are optional (eg. `22fps` and `22.1415` work just as well).
+
+### Timestamp
+
+The program will find the timestamp in a similar manner to the framerate (by separating the full name into bits using the `_` as a separator) but this time the program **expects the timestamp to be the last substring in the filename**.
+The timestamp also has a weird format - 12H with an AM/PM delimiter. This means that the numeric string has a variable length, and care must be taken to ensure the format is correct (`114500 AM` will go to 11:45, and `23000 PM` will become 14:30 in 24H format).
+
+To manualy name a folder so as to be detected as valid input, the simplest format you can achieve is:
+`<number>fps_<12H string> <AM/PM>`
+As previously mentioned, this might (and most likely will) change in the future, because it's not very robust, to put it mildly.
+
+It's also worth touching on the actual content of the folder, the `.tif` files. They have no naming convention aside from ordering, so they are usually numbered in some way (eg. `t001.tif`,`t002.tif`, and so on). Any way of numbering these files works, as long as it's compatible with alphabetical ordering. Otherwise, you risk swapping around images in the sequences and getting a nonsense signal.

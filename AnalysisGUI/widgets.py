@@ -50,10 +50,9 @@ class DICWidget(pg.ImageView):
         
     def connectSignals(self):
         if self.ui.roiBtn.isChecked():
-            print("Connected Raws to signals")
-            
+            pass
+
         else:
-            print("Disconnected Raws from signals")
             
             self.parent.updateSignals(np.ones_like(self.imageSource.AC))
     def tChange(self, ind, times):
@@ -87,14 +86,14 @@ class DICWidget(pg.ImageView):
     def update(self):
         # update based on limits in imageHolder
         lims = self.imageSource.limits
-        print(f'updated Raws with limits {lims}')
+        
         DICdata = self.imageSource.raws[lims[0]:lims[1]]
-        print(f'New no of images = {len(DICdata)}')
+        
         # recompute t axis to hold time in seconds in absolute terms
         self.setImage(DICdata, axes={'t': 0, 'x': 2, 'y': 1, 'c': None}, xvals=np.linspace(
             lims[0]/self.imageSource.framerate, lims[1]/self.imageSource.framerate, int(lims[1]-lims[0])))
         self.DICarray = DICdata
-        print('Set in DIC')
+       
 
     def roiChanged(self):
         # define super method
@@ -222,7 +221,6 @@ class Signals(QtWidgets.QWidget):  # class for handling signal data and updating
     def resetAnalysis(self):
         # reset limits from imagesource raws: those never change, and we can get back to start
         limits = (0, int(len(self.imageSource.raws)))
-        print(f'set new limits {limits}')
         frequency = 1.0
         filt = False
         interp = False
@@ -237,7 +235,6 @@ class Signals(QtWidgets.QWidget):  # class for handling signal data and updating
         # set limits to those enclosed by the region; minX/maxX are updated on region move
         self.updateRegions()
         limits = (int(round(self.minX*self.imageSource.framerate))+self.imageSource.limits[0], int(round(self.maxX*self.imageSource.framerate))+self.imageSource.limits[0])
-        print(f'set new limits {self.limits}')
         self.imageSource.reanalyze(limits=self.limits,
                                   frequency=float(self.freqIn.text()),
                                   interp=self.interpButton.isChecked(),
@@ -318,11 +315,9 @@ class DCWidget(pg.ImageView):
         
     def connectSignals(self):
         if self.ui.roiBtn.isChecked():
-            print("Connected DC to signals")
-            
+            return
+
         else:
-            print("Disconnected DC from signals")
-            
             self.parent.updateSignals(np.ones_like(self.imageSource.AC))
     def mouseMove(self, abs_pos):
 
@@ -343,7 +338,6 @@ class DCWidget(pg.ImageView):
         chans = self.imageSource.DC
         self.DCarray = chans
         self.setImage(chans,axes={'t': None, 'x': 1, 'y': 0, 'c': None})
-        print('Set in DC')
 
     def roiChanged(self):
         super().roiChanged()
@@ -392,10 +386,9 @@ class ACWidget(pg.ImageView):
         
     def connectSignals(self):
         if self.ui.roiBtn.isChecked():
-            print("Connected AC to signals")
+           return
             
         else:
-            print("Disconnected AC from signals")
             
             self.parent.updateSignals(np.ones_like(self.imageSource.AC))
     def mouseMove(self, abs_pos):
@@ -416,7 +409,6 @@ class ACWidget(pg.ImageView):
     def updateACdata(self, ACdata):
         self.ACarray = ACdata
         self.setImage(ACdata,axes={'t': None, 'x': 1, 'y': 0, 'c': None})
-        print('Set in AC')
 
     def roiChanged(self):
         super().roiChanged()
@@ -448,7 +440,7 @@ class ACWidget(pg.ImageView):
         self.ACarray = chans
         
         self.setImage(chans,axes={'t': None, 'x': 1, 'y': 0, 'c': None})
-        print('Set in AC')
+        
 
 
 class OverlayImage(pg.ImageView):
@@ -568,7 +560,7 @@ class OverlayImage(pg.ImageView):
         context_position = event.globalPos()
         self.menu.popup(context_position)
         self.resetMouseState()
-        print('Ended execution of menu')
+        
 
     def resetMouseState(self):
 
@@ -578,7 +570,6 @@ class OverlayImage(pg.ImageView):
         if hasattr(self.view, 'scene'):
             scene = self.view.scene()
             if hasattr(scene, 'clickEvents'):
-                print('resetclicks')
                 scene.clickEvents = []
 
         # Force an update
@@ -599,12 +590,9 @@ class OverlayImage(pg.ImageView):
             self.rescaleLabels()
             self.currentover.updateImage(self.currentover.image)
             self.sigLabelDeleted.emit(self.currentIndex, val)
-            print(f'Deleting label {val}')
         else:
-            print("No label to delete")
             return
         self.updateImage()
-        print('delete label')
 
     def changeLabel(self):
 
@@ -614,16 +602,13 @@ class OverlayImage(pg.ImageView):
 
         if ((0 <= row < self.currentover.image.shape[0]) and (0 <= col < self.currentover.image.shape[1])):
             val = self.currentover.image[row, col]
-            print(f'Changing label {val}')
             self.currentover.image[self.currentover.image ==
                                    val] = self.parent.brushcolor
             self.rescaleLabels()
             self.currentover.updateImage(self.currentover.image)
         else:
-            print("No label to change")
             return
         self.updateImage()
-        print('Change label')
 
     def mouseDoubleClickEvent(self, event):
         pos = self.cursor_position
@@ -632,7 +617,7 @@ class OverlayImage(pg.ImageView):
 
         if ((0 <= row < self.currentover.image.shape[0]) and (0 <= col < self.currentover.image.shape[1])):
             if event.button() == QtCore.Qt.LeftButton:
-                print("Clicked on smth")
+                
                 self.sigClickedImage.emit(
                     self.currentIndex, self.currentover.image[row, col])
                 
@@ -694,7 +679,6 @@ class Graph(pg.GraphItem):
         self.updateGraph()
         self.sigPointSelected.emit(
             self.metadata[index][0], self.metadata[index][1])
-        print("Updated graph")
 
     def enableLinks(self):
         self.linking = True
@@ -712,7 +696,6 @@ class Graph(pg.GraphItem):
         self.selectedIndices = None
         self.updateGraph()
         self.sigPointDeselected.emit(0)
-        print(f'Deleted lineage {nodename}')
 
     def keyPressEvent(self, ev):
         if ev.key() in [QtCore.Qt.Key_Up, QtCore.Qt.Key_Down, QtCore.Qt.Key_Left, QtCore.Qt.Key_Right] and self.selectedIndices is not None:
@@ -783,7 +766,6 @@ class Graph(pg.GraphItem):
         self.menu = self.getMenu()
         self.menu.popup(event.screenPos())
         self.sigContextMenuOpened.emit()
-        print('Ended execution of menu')
 
     def setData(self, **kwds):
         self.text = kwds.pop('text', [])

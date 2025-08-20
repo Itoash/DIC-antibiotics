@@ -30,7 +30,6 @@ pub mod utils{
         pub fn interpolate_time_legacy(mut stack:Array3<f32>,old_dt:f32, new_dt: f32)->Array3<f32> {
             
             let (height,width,ntimes) = stack.dim();
-            println!("Made it to line 2 calculation!");
             let times: Array1<f32> = (0..ntimes)
                             .map(|i| i as f32 * old_dt)
                             .collect::<Array1<f32>>();
@@ -950,7 +949,7 @@ pub mod ac{
         let mut ac = Array2::zeros((height,width));
         let mut dc = Array2::zeros((height,width));
         let time = Instant::now();
-        println!("Computed parameters");
+        
         //Zip up:
         // -Read-only view from original stack
         // -Mutable view from processed series
@@ -1110,9 +1109,6 @@ pub mod ac{
         let elapsed = time.elapsed();
         println!("Time to find limits:{:?}",elapsed);
         // Adjust end to match whole number of periods
-        println!("Current limits: {:?} {:?}", start, end);
-        println!("Start: {}, End: {}, NPeriods: {}", start, end, nperiods);
-        println!("Frequency: {}, Framerate: {}", frequency, framerate);
         let mut adjusted_nperiods = nperiods;
         // GUard against less than 1 periods
         let (final_start,final_end) = if nperiods <1{(start,end.max(raws_view.dim().2-1))}else{
@@ -1147,13 +1143,11 @@ pub mod ac{
             // Clamp start (should never be negative but just in case)
             let start_adj = if start_isize < 0 { 0 } else { start_isize } as usize;
             let end_adj = (start_isize + new_last_index) as usize;
-            println!("{:?},{:?}",start_adj,end_adj);
             (start_adj,end_adj)
         };
         let mut final_start = final_start;
         let mut final_end = final_end;
 
-        println!("Final limits: {:?} {:?}", final_start, final_end);
         if final_end >= raws_view.dim().2 {
             println!("Warning: final_end exceeds stack length, clamping to max index.");
             println!("Stack length: {}, final_end: {}", raws_view.dim().2, final_end);
@@ -1167,7 +1161,6 @@ pub mod ac{
             final_start = 0;
             final_end = raws_view.dim().2 - 1;
         }
-        println!("Final limits after adjustment: {:?} {:?}", final_start, final_end);
         //Slice inputs based on computed limits
         let  stack = raws_view.slice(s![.., .., final_start..=final_end]);
 
@@ -1192,8 +1185,6 @@ pub mod ac{
 
         //Print info
         let num_samples = stack.dim().2;
-        println!("Framerate is {:?}",framerate);
-        println!("Stack size is{:?}",num_samples);
 
         //Make time values
         let times = Array1::from_vec((0..num_samples).map(|x| x as f32 / framerate).collect());

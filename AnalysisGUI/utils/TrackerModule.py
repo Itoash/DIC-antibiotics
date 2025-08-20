@@ -713,7 +713,7 @@ class imagenetwork:
             try:
                 node = node[0]
             except IndexError:
-                print(node, index, col)
+                print(f"Node with color {col} not found in frame {index}. Skipping.")
             dims = np.shape(self.images[index])
 
             filtered = self.images[index].copy()

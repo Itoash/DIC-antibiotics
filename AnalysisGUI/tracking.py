@@ -55,6 +55,9 @@ class TrackWindow(QtWidgets.QMainWindow):
         # Connect signals and custom event handlers
         self._connect_signals()
         
+        # Set up keyboard shortcuts
+        self._setup_shortcuts()
+        
         # Display the window
         self.showMaximized()
 
@@ -80,7 +83,6 @@ class TrackWindow(QtWidgets.QMainWindow):
             # Update the plots with stabilized data
             self.DCplot.setImage(np.asarray(self.stabilized_images.copy()), axes={
                 't': 0, 'x': 2, 'y': 1, 'c': None})
-            print(f'DC min: {np.min(np.asarray(self.stabilized_images))}')
             self.DCplot.setOverlay(np.asarray(self.stabilized_masks.copy()))
 
 
@@ -151,7 +153,6 @@ class TrackWindow(QtWidgets.QMainWindow):
         
         # Auto-range the image display
         self.DCplot.autoRange()
-        print(f'minvalue in DC: {np.min(self.DCplot.imageItem.image)}')
 
     def _setup_toolbar(self):
         """Set up the toolbar with all its buttons and controls."""
@@ -262,6 +263,20 @@ class TrackWindow(QtWidgets.QMainWindow):
         self.Graph.setData(pos=graphnodes, adj=graphedges,
                         text=text, size=15, meta=meta)
 
+    def _setup_shortcuts(self):
+        """Set up keyboard shortcuts for the main window."""
+        # Create Ctrl+S shortcut for saving cells
+        self.save_shortcut = QtWidgets.QShortcut(QtCore.Qt.CTRL + QtCore.Qt.Key_S, self)
+        self.save_shortcut.activated.connect(self._handle_save_shortcut)
+
+    def _handle_save_shortcut(self):
+        """Handle Ctrl+S shortcut by opening a file dialog and saving cells."""
+        # Open a file dialog to select save directory
+        dialog = QtWidgets.QFileDialog()
+        save_path = dialog.getExistingDirectory(self, "Select Directory to Save Cell Data")
+        
+        if save_path:  # If user didn't cancel
+            self.saveCells(save_path)
     def _connect_signals(self):
         """Connect signals and custom event handlers."""
         # Connect signals between widgets
@@ -325,7 +340,6 @@ class TrackWindow(QtWidgets.QMainWindow):
     def switchoffHighlight(self, t):
         """Remove cell highlight when selection changes."""
         if self.highlight is not None:
-            print("Clear highlight")
             self.highlight.clear()
             self.highlight.update()
             self.DCplot.update()
@@ -555,7 +569,6 @@ class TrackWindow(QtWidgets.QMainWindow):
                 print('Cannot delete last image')
                 return
             # Remove the current image and associated data
-            print('Deleting image...')
             self.segBuffer.images.pop(currentIdx)
             self.segBuffer.masks.pop(currentIdx)
             self.analysisBuffer.ACs.pop(currentIdx)
@@ -610,7 +623,6 @@ class TrackWindow(QtWidgets.QMainWindow):
     def drawMode(self, checked):
         """Toggle drawing mode on/off."""
         if checked:
-            print('entered draw mode')
             val = self.brushcolor
             kern = np.full((self.brushsize, self.brushsize), val)
             cen = self.brushsize % 2
@@ -619,7 +631,7 @@ class TrackWindow(QtWidgets.QMainWindow):
         else:
             self.DCplot.currentover.drawKernel = None
             self.DCplot.updateImage()
-            print('exited draw mode')
+            
 
     def opacityChanged(self, value):
         """Change the opacity of the overlay."""
@@ -678,8 +690,6 @@ class TrackWindow(QtWidgets.QMainWindow):
             times = self.analysisBuffer.abstimes[:]
             times = list(sorted(times))
             times = np.asarray([t-times[0] for t in times]).astype(int)
-            print(len(times))
-            print(len(ACs))
             # Process cell data
             tic = tm.time()
             cell_data = process_cells(lineage, ACs, DCs, labels, times)
@@ -708,6 +718,7 @@ class TrackWindow(QtWidgets.QMainWindow):
             # Process cell data
             tic = tm.time()
             cell_data = process_cells(lineage, ACs, DCs, labels, times)
+            
             cell_keys = list(cell_data.keys())
             cell_keys.sort()
             cell_data = {i: cell_data[i] for i in cell_keys}
@@ -740,4 +751,3 @@ def writeCellDict(cell_data, path):
     return fullpath
 
 
-    

@@ -92,9 +92,6 @@ class ImageHolder:
         tic = tm.time()
         raws = np.moveaxis(self.raws.astype(np.float32), 0, 2)
         nperiods = self.raws.shape[0] / self.framerate
-        print(f'Raw image shape is:{raws.shape}')
-        print(f'Limits are {self.limits}')
-        print(f'Nperiods is {nperiods}')
         if self.filt_freqs[1] > self.framerate / 2:
             print(f'Warning: filter frequency {self.filt_freqs[1]} is higher than Nyquist frequency {self.framerate / 2}. Setting to Nyquist frequency.')
             self.filt_freqs = (self.filt_freqs[0], self.framerate / 2)
@@ -102,7 +99,7 @@ class ImageHolder:
             print(f'Warning: filter frequency {self.filt_freqs[0]} is lower than 0. Setting to 0.')
             self.filt_freqs = (0, self.filt_freqs[1])
         if self.filt_freqs[0] > self.frequency:
-            print(f'Warning: filter frequency {self.filt_freqs[0]} is higher than frequency {self.frequency}. Setting to frequency.')
+            print(f'Warning: filter frequency {self.filt_freqs[0]} is higher than frequency {self.frequency}. Setting to selected frequency.')
             self.filt_freqs = (self.frequency, self.filt_freqs[1])
         self.AC, self.DC, self.signaldata, self.limits = get_AC_data(
             raws,
@@ -117,12 +114,6 @@ class ImageHolder:
             filter_limits=self.filt_freqs
         )
         self.signaldata = (self.signaldata[0], np.moveaxis(self.signaldata[1], 2, 0))
-        print(f'Ac shape:{self.AC.shape}')
-        print(f'DC shape:{self.DC.shape}')
-        print(f'Sig shape:{self.signaldata[0].shape}')
-        print(f'Last time value:{self.signaldata[0][-1]}')
-        print(f'Chosen dt:{self.signaldata[0][-1] - self.signaldata[0][-2]}')
-        print(f'Time shape:{self.signaldata[1].shape}')
         toc = tm.time() - tic
         print(f"Processing took {toc:.3f} s")
 
@@ -154,11 +145,6 @@ class ImageHolder:
             self.filter = filt
         if filt_freqs is not None:
             self.filt_freqs = filt_freqs
-        print(f'new frequency {self.frequency}')
-        print(f'new limits {self.limits}')
-        print(f'new interpolation {self.interpolate}')
-        print(f'new filter {self.filter}')
-        print(f'framerate {self.framerate}')
         self.update(hardlimits=hardlimits)
         self.parent.updateAnalysis()
 
@@ -171,7 +157,7 @@ class ImageHolder:
             New limits for analysis.
         """
         self.limits = newlimits
-        print(f'set new limits {self.limits}')
+        print(f'Set new limits {self.limits}')
         self.update()
         self.parent.updateAnalysis()
 

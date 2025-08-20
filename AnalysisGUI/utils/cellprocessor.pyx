@@ -102,6 +102,7 @@ cdef tuple process_cell_lineage(str cellname, dict lineage_dict, np.ndarray time
     # Initialize times array to match lineage entries
     cell_data['times'] = np.array([times[frame] for frame, _ in lineage_dict.items()])
     cell_data['idx'] = list(lineage_dict.keys())
+    cell_data['labels'] = [x for _,x in lineage_dict.items()]
     
     # Link up the lineage dict with the feature dict
     for frame, label_val in lineage_dict.items():
