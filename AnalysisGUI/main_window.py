@@ -421,10 +421,18 @@ class MainWindow(QtWidgets.QMainWindow):
             msg.exec_()
             return
         # Create a custom dialog to get number of locations and starting index
-        num_locations, start_index = self.show_parameter_dialog()
+        num_locations, start_index, filter_text = self.show_parameter_dialog()
         if num_locations is None or start_index is None:
             print("Dialog cancelled or invalid input")
             return
+        
+        # Get string to filter for
+        if filter_text is not None:
+            filter_text = filter_text.strip()
+            if len([f for f in files if filter_text in f]) == 0:
+                print(f"Warning: No files found matching filter '{filter_text}'.")
+                return
+            files = [f for f in files if filter_text in f]
         # Check if start_index is within bounds
         if start_index < 0 or start_index >= len(spoolfiles):
             QtWidgets.QMessageBox.warning(
@@ -488,10 +496,19 @@ class MainWindow(QtWidgets.QMainWindow):
         files = [f for _, f in sorted(zip(times, files))]
         
         # Create a custom dialog to get number of locations and starting index
-        num_locations, start_index = self.show_parameter_dialog()
+        num_locations, start_index, filter_text = self.show_parameter_dialog()
         if num_locations is None or start_index is None:
             print("Dialog cancelled or invalid input")
             return
+        
+        # Get string to filter for
+        if filter_text is not None:
+            filter_text = filter_text.strip()
+            if len([f for f in files if filter_text in f]) == 0:
+                print(f"Warning: No files found matching filter '{filter_text}'.")
+                return
+            files = [f for f in files if filter_text in f]
+
         # Check if start_index is within bounds
         if start_index < 0 or start_index >= len(files):
             QtWidgets.QMessageBox.warning(
@@ -516,11 +533,10 @@ class MainWindow(QtWidgets.QMainWindow):
         
         tic = tm.time()
         for idx, i in enumerate(range(start_index, len(files), num_locations)):
-            if os.path.isdir(files[i]):
+            if os.path.isdir(files[i]) and filter_text in files[i]:
                 self.loadstack(files[i], set_lim=fraction_limits)
                 self.addImage(resort=False)
             else:
-                print(f"Skipping {files[i]} as it is not a directory")
                 continue
             progress.setValue(idx+1)
             QtWidgets.QApplication.processEvents()
@@ -558,6 +574,10 @@ class MainWindow(QtWidgets.QMainWindow):
         start_index_input.setMaximum(10000)
         start_index_input.setValue(0)
         
+        # Filter input
+        filter_input = QtWidgets.QLineEdit(dialog)
+        layout.addRow("Filter (optional):", filter_input)
+
         layout.addRow("Number of locations:", num_locations_input)
         layout.addRow("Starting index:", start_index_input)
         
@@ -576,16 +596,17 @@ class MainWindow(QtWidgets.QMainWindow):
         if dialog.exec_() == QtWidgets.QDialog.Accepted:
             num_locations = num_locations_input.value()
             start_index = start_index_input.value()
-            
+            filter_text = filter_input.text()
+
             
             # Process the values as needed
             print(f"Selected: {num_locations} locations starting from index {start_index}")
-            
-            return num_locations, start_index
+
+            return num_locations, start_index, filter_text
         else:
             # User cancelled
             print("Dialog cancelled")
-            return None, None
+            return None, None, None
 
     def addImage(self, img=None, resort=True):
         """

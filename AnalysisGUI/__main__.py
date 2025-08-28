@@ -11,6 +11,8 @@ def runApp():
     import sys
     from PyQt5.QtWidgets import QApplication
     from AnalysisGUI.main_window import MainWindow
+    import pyqtgraph as pg
+    pg.setConfigOptions(useOpenGL=True)
     app = QApplication(sys.argv)
     app.setApplicationName('AnalysisGUI')
     imageViewer = MainWindow()

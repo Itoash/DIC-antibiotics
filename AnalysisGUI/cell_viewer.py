@@ -197,7 +197,7 @@ class CellViewer(QtWidgets.QMainWindow):
         obj_data = self.data_dict.get(first_object, {})
         object_times = obj_data.get('times', [])
 
-        if object_times:
+        if len(object_times) > 0:
             first_time = object_times[0]
             closest_idx = np.abs(self.globalTimes - first_time).argmin()
             self.time_change_lock = True

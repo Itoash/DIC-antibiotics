@@ -178,6 +178,7 @@ def evaluatecandidates(distancetoothers, overlaps, anglestoothers, areatoothers,
     # areatoothers: 1D array with area ratio
 
     # if it has substantial overlaps in next frame, continue scoring
+    print(f'Processing color {name} in frame {frame}')
     if isinstance(overlaps, np.ndarray):
         indexes = np.argwhere(overlaps[1, :] > minoverlap)
         if len(indexes) == 0:  # no significant overlap
@@ -299,21 +300,31 @@ def multiprocessframes(imagestack):
     opstack = imagestack.copy()
     # zero-pad stack to add data about last framw w/o overlaps
     opstack.append(np.zeros_like(opstack[0]))
+
+    # Get per-frame info about each label
     with concurrent.futures.ThreadPoolExecutor(max_workers = os.cpu_count()) as executor:
         stackdata = list(executor.map(
             process_frame, opstack[:-1], opstack[1:], np.arange(0, len(imagestack))))
+    
     # stackdata = []
     # for prev,nex,idx in zip(opstack[:-1],opstack[1:],[i for i in range(len(imagestack))]):
     #     stackdata.append(process_frame(prev,nex,idx))
+
     COMlist = []
     for el in stackdata:
         COMs = [i for i in el[0]]
         COMs = np.asarray(COMs)
         COMlist.append(COMs)
+
+    # duplicate last COM array
     COMlist.append(COMlist[-1])
+
+    print(f'found COMs: {COMlist}')
     with concurrent.futures.ThreadPoolExecutor(max_workers=os.cpu_count()) as executor:
         dist = list(executor.map(inversedistancematrix,
                     COMlist[:-1], COMlist[1:]))
+    for el in dist:
+        print(f'Distance matrix shape: {el.shape}')
     return stackdata, dist
 
 
@@ -326,7 +337,8 @@ def process_frame(currentimage, nextimage, imageid):
     current_empty = len(current_unique) <= 1 and (len(current_unique) == 0 or current_unique[0] == 0)
     next_empty = len(next_unique) <= 1 and (len(next_unique) == 0 or next_unique[0] == 0)
     
-    if current_empty or next_empty:
+    if current_empty:
+        print(f'Found empty frame at index {imageid}')
         return (np.zeros((0, 2)), np.zeros((0, 2)), np.zeros((0, 2)), np.zeros((0, 2)), [], np.zeros((0, 2)))
     overlapdict = {}
     COMdict = {}
@@ -457,8 +469,9 @@ def ratiomatrix(array1, array2):
 
 def evaluateframe(frame, framedict1, framedict2, distancematrix, ind):
     # Handle empty frames - if distance matrix is empty, return empty list
-    if distancematrix.size == 0:
-        return []
+    # if distancematrix.size == 0:
+    #     print("Distance matrix is empty.")
+    #     return []
     
     distancelist = [distancematrix[i, :]
                     for i in range(distancematrix.shape[0])]
@@ -707,9 +720,10 @@ class imagenetwork:
     def getbackoverlaps(self, index):
 
         for col in range(1, int(np.max(self.images[index]+1))):
-
+            
             node = [n for n in self.nodes if n.name ==
                     col and n.frame == float(index)]
+            
             try:
                 node = node[0]
             except IndexError:
